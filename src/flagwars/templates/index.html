@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlagWars - 旗帜战争</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .game-area {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .game-canvas-container {
+            flex: 3;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        #gameCanvas {
+            background: #2c3e50;
+            border-radius: 8px;
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .game-info {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .player-setup {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        input, button {
+            padding: 10px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .terrain-legend {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9em;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚩 FlagWars</h1>
+            <div class="subtitle">进攻、防守、合作与背叛……利用一切机会赢得胜利！</div>
+        </div>
+        
+        <div class="game-area">
+            <div class="game-canvas-container">
+                <canvas id="gameCanvas" width="800" height="600"></canvas>
+            </div>
+            
+            <div class="game-info">
+                <div class="player-setup">
+                    <h3>玩家设置</h3>
+                    <input type="text" id="playerName" placeholder="输入玩家名称" value="玩家1">
+                    <input type="color" id="playerColor" value="#FF0000">
+                    <button id="joinGame">加入游戏</button>
+                    <button id="readyBtn" style="display: none; background-color: #ff6b6b;">准备</button>
+                    <div class="status" id="connectionStatus">未连接</div>
+                </div>
+                
+                <div class="controls">
+                    <h3>游戏控制</h3>
+                    <button id="moveUp" disabled>↑ 向上移动</button>
+                    <button id="moveDown" disabled>↓ 向下移动</button>
+                    <button id="moveLeft" disabled>← 向左移动</button>
+                    <button id="moveRight" disabled>→ 向右移动</button>
+                    <div class="status" id="gameStatus">等待加入游戏...</div>
+                </div>
+                
+                <div class="terrain-legend">
+                    <h4>地形图例</h4>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #27ae60;"></div>
+                        <span>平原</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e74c3c;"></div>
+                        <span>基地</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f39c12;"></div>
+                        <span>塔楼</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #95a5a6;"></div>
+                        <span>城墙</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #7f8c8d;"></div>
+                        <span>山脉</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #16a085;"></div>
+                        <span>沼泽</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class FlagWarsClient {
+            constructor() {
+                this.ws = null;
+                this.game_state = null;
+                this.player_id = null;
+                this.game_id = null;
+                this.selected_tile = null;
+                this.state_update_interval = null;
+                
+                this.canvas = document.getElementById("gameCanvas");
+                this.ctx = this.canvas.getContext("2d");
+                
+                this.tile_size = 40;
+                this.canvas_width = 800;
+                this.canvas_height = 600;
+                
+                this.setup_event_listeners();
+                this.render();
+            }
+            
+            setup_event_listeners() {
+                // 加入游戏按钮
+                document.getElementById("joinGame").addEventListener("click", (e) => this.join_game(e));
+                
+                // 准备按钮
+                document.getElementById("readyBtn").addEventListener("click", (e) => this.toggle_ready(e));
+                
+                // 移动控制按钮
+                document.getElementById("moveUp").addEventListener("click", (e) => this.move_soldiers(0, -1));
+                document.getElementById("moveDown").addEventListener("click", (e) => this.move_soldiers(0, 1));
+                document.getElementById("moveLeft").addEventListener("click", (e) => this.move_soldiers(-1, 0));
+                document.getElementById("moveRight").addEventListener("click", (e) => this.move_soldiers(1, 0));
+                
+                // 画布点击事件
+                this.canvas.addEventListener("click", (e) => this.handle_canvas_click(e));
+                
+                // 键盘控制
+                document.addEventListener("keydown", (e) => this.handle_keyboard(e));
+            }
+            
+            join_game(event) {
+                const player_name = document.getElementById("playerName").value;
+                const player_color = document.getElementById("playerColor").value;
+                
+                // 创建WebSocket连接
+                const ws_protocol = window.location.protocol === "https:" ? "wss" : "ws";
+                const ws_url = `${ws_protocol}://${window.location.host}/ws`;
+                
+                try {
+                    this.ws = new WebSocket(ws_url);
+                    
+                    this.ws.onopen = (e) => this.on_ws_open(player_name, player_color);
+                    this.ws.onmessage = (e) => this.on_ws_message(e);
+                    this.ws.onclose = (e) => this.on_ws_close(e);
+                    this.ws.onerror = (e) => this.on_ws_error(e);
+                    
+                    document.getElementById("connectionStatus").textContent = "连接中...";
+                    
+                } catch (e) {
+                    document.getElementById("connectionStatus").textContent = `连接失败: ${e}`;
+                }
+            }
+            
+            on_ws_open(player_name, player_color) {
+                document.getElementById("connectionStatus").textContent = "已连接";
+                
+                // 发送加入游戏消息
+                const join_message = {
+                    "type": "join_game",
+                    "player_name": player_name,
+                    "color": player_color
+                };
+                this.ws.send(JSON.stringify(join_message));
+            }
+            
+            on_ws_message(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    const message_type = data.type;
+                    
+                    if (message_type === "game_joined") {
+                        this.handle_game_joined(data);
+                    } else if (message_type === "game_state") {
+                        this.handle_game_state(data);
+                    } else if (message_type === "move_result") {
+                        this.handle_move_result(data);
+                    } else if (message_type === "error") {
+                        this.handle_error(data);
+                    } else if (message_type === "player_ready_updated") {
+                        this.handle_player_ready_updated(data);
+                    } else if (message_type === "game_started") {
+                        this.handle_game_started(data);
+                    }
+                    
+                } catch (e) {
+                    console.log(`消息处理错误: ${e}`);
+                }
+            }
+            
+            handle_game_joined(data) {
+                this.game_id = data.game_id;
+                this.player_id = data.player_id;
+                this.game_state = data.game_state;
+                
+                document.getElementById("gameStatus").textContent = `游戏已加入 - 玩家 ${this.player_id}`;
+                
+                // 显示准备按钮
+                document.getElementById("readyBtn").style.display = "inline-block";
+                
+                // 禁用移动控制（等待游戏开始）
+                ["moveUp", "moveDown", "moveLeft", "moveRight"].forEach(btn_id => {
+                    document.getElementById(btn_id).disabled = true;
+                });
+                
+                // 开始定期获取游戏状态
+                this.start_state_updates();
+            }
+            
+            handle_game_state(data) {
+                this.game_state = data.game_state;
+                this.render();
+            }
+            
+            handle_move_result(data) {
+                const success = data.success;
+                this.game_state = data.game_state;
+                
+                if (success) {
+                    document.getElementById("gameStatus").textContent = "移动成功";
+                } else {
+                    document.getElementById("gameStatus").textContent = "移动失败";
+                }
+                
+                this.render();
+            }
+            
+            handle_error(data) {
+                const error_message = data.message;
+                document.getElementById("gameStatus").textContent = `错误: ${error_message}`;
+            }
+            
+            toggle_ready(event) {
+                if (!this.ws) {
+                    document.getElementById("gameStatus").textContent = "请先连接服务器";
+                    return;
+                }
+                
+                const ready_message = {
+                    "type": "player_ready"
+                };
+                
+                this.ws.send(JSON.stringify(ready_message));
+            }
+            
+            handle_player_ready_updated(data) {
+                this.game_state = data.game_state;
+                const game_started = data.game_started;
+                
+                // 更新准备按钮状态
+                const readyBtn = document.getElementById("readyBtn");
+                const player_ready = this.game_state.players[this.player_id]?.ready || false;
+                
+                if (player_ready) {
+                    readyBtn.textContent = "取消准备";
+                    readyBtn.style.backgroundColor = "#6bff6b";
+                } else {
+                    readyBtn.textContent = "准备";
+                    readyBtn.style.backgroundColor = "#ff6b6b";
+                }
+                
+                // 更新游戏状态显示
+                const ready_players = Object.values(this.game_state.players).filter(p => p.ready).length;
+                const total_players = Object.keys(this.game_state.players).length;
+                
+                if (game_started) {
+                    document.getElementById("gameStatus").textContent = "游戏开始！";
+                    
+                    // 启用移动控制
+                    ["moveUp", "moveDown", "moveLeft", "moveRight"].forEach(btn_id => {
+                        document.getElementById(btn_id).disabled = false;
+                    });
+                } else {
+                    if (total_players < 2) {
+                        document.getElementById("gameStatus").textContent = 
+                            `等待其他玩家加入 (${total_players}/2)`;
+                    } else {
+                        document.getElementById("gameStatus").textContent = 
+                            `等待玩家准备 (${ready_players}/${total_players})`;
+                    }
+                }
+                
+                this.render();
+            }
+            
+            handle_game_started(data) {
+                this.game_state = data.game_state;
+                document.getElementById("gameStatus").textContent = "游戏开始！";
+                
+                // 启用移动控制
+                ["moveUp", "moveDown", "moveLeft", "moveRight"].forEach(btn_id => {
+                    document.getElementById(btn_id).disabled = false;
+                });
+                
+                this.render();
+            }
+            
+            on_ws_close(event) {
+                document.getElementById("connectionStatus").textContent = "连接已关闭";
+                document.getElementById("gameStatus").textContent = "游戏连接断开";
+                
+                // 禁用移动控制
+                ["moveUp", "moveDown", "moveLeft", "moveRight"].forEach(btn_id => {
+                    document.getElementById(btn_id).disabled = true;
+                });
+                
+                // 停止定期获取游戏状态
+                this.stop_state_updates();
+            }
+            
+            on_ws_error(event) {
+                document.getElementById("connectionStatus").textContent = "连接错误";
+            }
+            
+            handle_canvas_click(event) {
+                if (!this.game_state) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                
+                const tile_x = Math.floor(x / this.tile_size);
+                const tile_y = Math.floor(y / this.tile_size);
+                
+                if (tile_x >= 0 && tile_x < this.game_state.map_width && 
+                    tile_y >= 0 && tile_y < this.game_state.map_height) {
+                    
+                    const tile = this.game_state.tiles[tile_y][tile_x];
+                    
+                    // 只选中格子，不执行移动操作
+                    this.selected_tile = [tile_x, tile_y];
+                    document.getElementById("gameStatus").textContent = 
+                        `选中地块 (${tile_x}, ${tile_y}) - 士兵: ${tile.soldiers}`;
+                }
+            }
+            
+            handle_keyboard(event) {
+                if (!this.game_state || !this.selected_tile) return;
+                
+                const [x, y] = this.selected_tile;
+                let new_x = x;
+                let new_y = y;
+                
+                switch(event.key) {
+                    case "ArrowUp":
+                        new_y = Math.max(0, y - 1);
+                        break;
+                    case "ArrowDown":
+                        new_y = Math.min(this.game_state.map_height - 1, y + 1);
+                        break;
+                    case "ArrowLeft":
+                        new_x = Math.max(0, x - 1);
+                        break;
+                    case "ArrowRight":
+                        new_x = Math.min(this.game_state.map_width - 1, x + 1);
+                        break;
+                    default:
+                        return;
+                }
+                
+                event.preventDefault();
+                
+                // 尝试移动士兵到新位置
+                this.move_soldiers_to(new_x, new_y);
+            }
+            
+            move_soldiers(dx, dy) {
+                if (!this.selected_tile) {
+                    document.getElementById("gameStatus").textContent = "请先选择一个地块";
+                    return;
+                }
+                
+                const [from_x, from_y] = this.selected_tile;
+                const to_x = from_x + dx;
+                const to_y = from_y + dy;
+                
+                this.move_soldiers_to(to_x, to_y);
+            }
+            
+            move_soldiers_to(to_x, to_y) {
+                if (!this.selected_tile || !this.game_state) return;
+                
+                const [from_x, from_y] = this.selected_tile;
+                const from_tile = this.game_state.tiles[from_y][from_x];
+                
+                // 检查源地块是否属于当前玩家且有士兵
+                if (from_tile.owner_id !== this.player_id || from_tile.soldiers <= 0) {
+                    document.getElementById("gameStatus").textContent = 
+                        "无法移动：源地块不是您的或没有士兵";
+                    return;
+                }
+                
+                // 检查目标位置是否有效
+                if (to_x < 0 || to_x >= this.game_state.map_width || 
+                    to_y < 0 || to_y >= this.game_state.map_height) {
+                    return;
+                }
+                
+                // 发送移动请求
+                this.ws.send(JSON.stringify({
+                    type: "move_soldiers",
+                    from_x: from_x,
+                    from_y: from_y,
+                    to_x: to_x,
+                    to_y: to_y,
+                    player_id: this.player_id
+                }));
+                
+                // 移动后更新选中位置到新位置，实现连续操作
+                this.selected_tile = [to_x, to_y];
+                document.getElementById("gameStatus").textContent = 
+                    `移动士兵到 (${to_x}, ${to_y})`;
+            }
+            
+            render() {
+                if (!this.game_state) {
+                    this.render_waiting_screen();
+                    return;
+                }
+                
+                this.ctx.clearRect(0, 0, this.canvas_width, this.canvas_height);
+                
+                // 渲染地图
+                for (let y = 0; y < this.game_state.map_height; y++) {
+                    for (let x = 0; x < this.game_state.map_width; x++) {
+                        this.render_tile(x, y);
+                    }
+                }
+                
+                // 渲染选中效果
+                if (this.selected_tile) {
+                    this.render_selection();
+                }
+                
+                // 渲染游戏信息
+                this.render_game_info();
+            }
+            
+            render_tile(x, y) {
+                const tile = this.game_state.tiles[y][x];
+                const screen_x = x * this.tile_size;
+                const screen_y = y * this.tile_size;
+                
+                // 地形颜色
+                const terrain_colors = {
+                    "plain": "#27ae60",      // 平原 - 绿色
+                    "base": "#e74c3c",      // 基地 - 红色
+                    "tower": "#f39c12",     // 塔楼 - 橙色
+                    "wall": "#95a5a6",      // 城墙 - 灰色
+                    "mountain": "#7f8c8d", // 山脉 - 深灰
+                    "swamp": "#16a085"      // 沼泽 - 青色
+                };
+                
+                const color = terrain_colors[tile.terrain_type] || "#34495e";
+                
+                // 绘制地块
+                this.ctx.fillStyle = color;
+                this.ctx.fillRect(screen_x, screen_y, this.tile_size, this.tile_size);
+                
+                // 绘制边框
+                this.ctx.strokeStyle = "#2c3e50";
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(screen_x, screen_y, this.tile_size, this.tile_size);
+                
+                // 如果地块有所有者，绘制所有者颜色
+                if (tile.owner_id) {
+                    const player = this.game_state.players[tile.owner_id];
+                    if (player) {
+                        this.ctx.fillStyle = player.color + "40";  // 半透明
+                        this.ctx.fillRect(screen_x, screen_y, this.tile_size, this.tile_size);
+                    }
+                }
+                
+                // 绘制士兵数量
+                if (tile.soldiers > 0) {
+                    this.ctx.fillStyle = "white";
+                    this.ctx.font = "12px Arial";
+                    this.ctx.textAlign = "center";
+                    this.ctx.fillText(
+                        tile.soldiers.toString(),
+                        screen_x + this.tile_size / 2,
+                        screen_y + this.tile_size / 2 + 4
+                    );
+                }
+            }
+            
+            render_selection() {
+                const [x, y] = this.selected_tile;
+                const screen_x = x * this.tile_size;
+                const screen_y = y * this.tile_size;
+                
+                this.ctx.strokeStyle = "#f1c40f";
+                this.ctx.lineWidth = 3;
+                this.ctx.strokeRect(screen_x, screen_y, this.tile_size, this.tile_size);
+            }
+            
+            render_game_info() {
+                if (this.game_state.game_over) {
+                    const winner = this.game_state.winner;
+                    this.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+                    this.ctx.fillRect(0, 0, this.canvas_width, this.canvas_height);
+                    
+                    this.ctx.fillStyle = "white";
+                    this.ctx.font = "bold 48px Arial";
+                    this.ctx.textAlign = "center";
+                    
+                    if (winner) {
+                        this.ctx.fillText(`${winner} 获胜！`, this.canvas_width / 2, this.canvas_height / 2);
+                    } else {
+                        this.ctx.fillText("游戏结束", this.canvas_width / 2, this.canvas_height / 2);
+                    }
+                }
+            }
+            
+            render_waiting_screen() {
+                this.ctx.fillStyle = "#2c3e50";
+                this.ctx.fillRect(0, 0, this.canvas_width, this.canvas_height);
+                
+                this.ctx.fillStyle = "white";
+                this.ctx.font = "24px Arial";
+                this.ctx.textAlign = "center";
+                this.ctx.fillText("等待加入游戏...", this.canvas_width / 2, this.canvas_height / 2);
+            }
+            
+            // 开始定期获取游戏状态
+            start_state_updates() {
+                // 如果已经在更新，先停止
+                this.stop_state_updates();
+                
+                // 每10毫秒获取一次游戏状态
+                this.state_update_interval = setInterval(() => {
+                    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                        const get_state_message = {
+                            "type": "get_game_state"
+                        };
+                        this.ws.send(JSON.stringify(get_state_message));
+                    }
+                }, 10);  // 10毫秒间隔
+            }
+            
+            // 停止定期获取游戏状态
+            stop_state_updates() {
+                if (this.state_update_interval) {
+                    clearInterval(this.state_update_interval);
+                    this.state_update_interval = null;
+                }
+            }
+        }
+        
+        // 当页面加载完成后启动游戏
+        window.addEventListener('load', () => {
+            new FlagWarsClient();
+        });
+    </script>
+</body>
+</html>

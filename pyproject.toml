@@ -1,0 +1,23 @@
+[project]
+name = "flagwars"
+version = "0.1.0"
+description = "现代化的夺旗游戏"
+authors = [
+    {name = "FlagWars Team", email = "team@flagwars.com"}
+]
+readme = "README_ch.md"
+requires-python = ">=3.8"
+
+[project.scripts]
+flagwars-server = "flagwars.server:main"
+
+[tool.uv]
+
+[tool.uv.sources]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.dependencies]
+tornado = "^6.4"
