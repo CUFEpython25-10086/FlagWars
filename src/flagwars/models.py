@@ -183,8 +183,8 @@ class GameState:
         if not to_tile.is_passable():
             return False
         
-        # 移动士兵（简化：移动所有士兵）
-        if from_tile.soldiers > 0:
+        # 移动士兵（必须至少留下1名士兵在原地）
+        if from_tile.soldiers > 1:  # 只有当士兵数量大于1时才能移动
             # 检查是否是敌方基地，如果是，记录原始所有者
             is_enemy_base = False
             base_owner = None
@@ -195,10 +195,13 @@ class GameState:
                         base_owner = player
                         break
             
+            # 计算可以移动的士兵数量（至少留下1名士兵）
+            movable_soldiers = from_tile.soldiers - 1
+            
             # 处理占领逻辑
             if to_tile.owner is None or to_tile.owner.id != player_id:
                 # 敌方或中立地块
-                if to_tile.soldiers < from_tile.soldiers:
+                if to_tile.soldiers < movable_soldiers:
                     # 占领成功
                     was_neutral = to_tile.owner is None  # 检查是否是未占领地块
                     to_tile.owner = from_tile.owner
@@ -206,21 +209,21 @@ class GameState:
                     # 移动到未占领地块时至少留下一名士兵
                     if was_neutral:
                         # 未占领地块，至少留下1名士兵
-                        # 移动的士兵数量应该是原士兵数减去留下的1名士兵
-                        to_tile.soldiers = from_tile.soldiers - 1
+                        # 移动的士兵数量应该是可移动士兵数
+                        to_tile.soldiers = movable_soldiers
                         from_tile.soldiers = 1  # 留下1名士兵
                     else:
-                        # 敌方地块，全部移动
-                        to_tile.soldiers = from_tile.soldiers - to_tile.soldiers
-                        from_tile.soldiers = 0
+                        # 敌方地块，移动可移动的士兵
+                        to_tile.soldiers = movable_soldiers - to_tile.soldiers
+                        from_tile.soldiers = 1  # 留下1名士兵
                 else:
                     # 战斗，双方士兵抵消
-                    to_tile.soldiers -= from_tile.soldiers
-                    from_tile.soldiers = 0
+                    to_tile.soldiers -= movable_soldiers
+                    from_tile.soldiers = 1  # 留下1名士兵
             else:
-                # 友方地块，直接移动
-                to_tile.soldiers += from_tile.soldiers
-                from_tile.soldiers = 0
+                # 友方地块，移动可移动的士兵
+                to_tile.soldiers += movable_soldiers
+                from_tile.soldiers = 1  # 留下1名士兵
             
             # 检查是否占领了敌方基地（在士兵抵消后检查）
             if is_enemy_base and base_owner:
