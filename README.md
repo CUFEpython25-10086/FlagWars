@@ -1,6 +1,9 @@
 # FlagWars
 > May the FLAG be with you.
 
+## License
+This project is licensed under the [GNU GPLv3 License](LICENSE).
+
 FlagWars is a modern *Capture the Flag* game. In this game, each player has a BASE. The objective is to capture opponents' bases and become the last player standing with a base.
 
 ## Terrain Types

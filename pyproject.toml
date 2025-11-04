@@ -7,6 +7,7 @@ authors = [
 ]
 readme = "README_ch.md"
 requires-python = ">=3.8"
+license = {text = "GPL-3.0"}
 
 [project.scripts]
 flagwars-server = "flagwars.server:main"
