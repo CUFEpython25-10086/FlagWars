@@ -70,6 +70,9 @@ class GameState:
         self.game_started = False  # 添加游戏开始状态
         self.winner: Optional[Player] = None
         
+        # 操作日志队列，每个tick执行一个操作
+        self.pending_moves: List[Dict] = []
+        
         self._initialize_map()
     
     def _initialize_map(self):
@@ -142,11 +145,86 @@ class GameState:
         """更新游戏刻"""
         self.current_tick += 1
         
+        # 执行一个待处理的移动操作（如果有的话）
+        self._execute_pending_move()
+        
         # 生成士兵
         self._generate_soldiers()
         
         # 检查游戏结束条件
         self._check_game_over()
+    
+    def _execute_pending_move(self):
+        """执行一个待处理的移动操作"""
+        if not self.pending_moves:
+            return
+        
+        # 取出第一个操作并执行
+        move_data = self.pending_moves.pop(0)
+        self._process_move(
+            move_data['from_x'], move_data['from_y'],
+            move_data['to_x'], move_data['to_y'],
+            move_data['player_id']
+        )
+    
+    def _process_move(self, from_x: int, from_y: int, to_x: int, to_y: int, player_id: int):
+        """处理移动操作（实际执行）"""
+        if not (0 <= from_x < self.map_width and 0 <= from_y < self.map_height):
+            return False
+        if not (0 <= to_x < self.map_width and 0 <= to_y < self.map_height):
+            return False
+        
+        from_tile = self.tiles[from_y][from_x]
+        to_tile = self.tiles[to_y][to_x]
+        
+        # 检查玩家所有权和可通行性
+        if from_tile.owner is None or from_tile.owner.id != player_id:
+            return False
+        if not to_tile.is_passable():
+            return False
+        
+        # 移动士兵（简化：移动所有士兵）
+        if from_tile.soldiers > 0:
+            # 处理占领逻辑
+            if to_tile.owner is None or to_tile.owner.id != player_id:
+                # 敌方或中立地块
+                if to_tile.soldiers < from_tile.soldiers:
+                    # 占领成功
+                    was_neutral = to_tile.owner is None  # 检查是否是未占领地块
+                    to_tile.owner = from_tile.owner
+                    
+                    # 移动到未占领地块时至少留下一名士兵
+                    if was_neutral:
+                        # 未占领地块，至少留下1名士兵
+                        to_tile.soldiers = from_tile.soldiers - to_tile.soldiers
+                        from_tile.soldiers = 1  # 留下1名士兵
+                    else:
+                        # 敌方地块，全部移动
+                        to_tile.soldiers = from_tile.soldiers - to_tile.soldiers
+                        from_tile.soldiers = 0
+                else:
+                    # 战斗，双方士兵抵消
+                    to_tile.soldiers -= from_tile.soldiers
+                    from_tile.soldiers = 0
+            else:
+                # 友方地块，直接移动
+                to_tile.soldiers += from_tile.soldiers
+                from_tile.soldiers = 0
+            
+            # 检查是否占领了敌方基地
+            if to_tile.terrain_type == TerrainType.BASE and to_tile.owner is not None:
+                base_owner = None
+                for player in self.players.values():
+                    if player.base_position == (to_x, to_y):
+                        base_owner = player
+                        break
+                
+                if base_owner and base_owner.id != player_id:
+                    base_owner.is_alive = False
+            
+            return True
+        
+        return False
     
     def _generate_soldiers(self):
         """根据地形生成士兵"""
@@ -177,51 +255,31 @@ class GameState:
                 self.winner = alive_players[0]
     
     def move_soldiers(self, from_x: int, from_y: int, to_x: int, to_y: int, player_id: int):
-        """移动士兵"""
+        """添加移动士兵请求到队列"""
         if not (0 <= from_x < self.map_width and 0 <= from_y < self.map_height):
             return False
         if not (0 <= to_x < self.map_width and 0 <= to_y < self.map_height):
             return False
         
         from_tile = self.tiles[from_y][from_x]
-        to_tile = self.tiles[to_y][to_x]
         
         # 检查玩家所有权和可通行性
         if from_tile.owner is None or from_tile.owner.id != player_id:
             return False
+        if from_tile.soldiers <= 0:
+            return False
+        
+        to_tile = self.tiles[to_y][to_x]
         if not to_tile.is_passable():
             return False
         
-        # 移动士兵（简化：移动所有士兵）
-        if from_tile.soldiers > 0:
-            # 处理占领逻辑
-            if to_tile.owner is None or to_tile.owner.id != player_id:
-                # 敌方或中立地块
-                if to_tile.soldiers < from_tile.soldiers:
-                    # 占领成功
-                    to_tile.owner = from_tile.owner
-                    to_tile.soldiers = from_tile.soldiers - to_tile.soldiers
-                    from_tile.soldiers = 0
-                else:
-                    # 战斗，双方士兵抵消
-                    to_tile.soldiers -= from_tile.soldiers
-                    from_tile.soldiers = 0
-            else:
-                # 友方地块，直接移动
-                to_tile.soldiers += from_tile.soldiers
-                from_tile.soldiers = 0
-            
-            # 检查是否占领了敌方基地
-            if to_tile.terrain_type == TerrainType.BASE and to_tile.owner is not None:
-                base_owner = None
-                for player in self.players.values():
-                    if player.base_position == (to_x, to_y):
-                        base_owner = player
-                        break
-                
-                if base_owner and base_owner.id != player_id:
-                    base_owner.is_alive = False
-            
-            return True
+        # 将移动操作添加到队列
+        self.pending_moves.append({
+            'from_x': from_x,
+            'from_y': from_y,
+            'to_x': to_x,
+            'to_y': to_y,
+            'player_id': player_id
+        })
         
-        return False
+        return True
