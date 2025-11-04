@@ -185,6 +185,16 @@ class GameState:
         
         # 移动士兵（简化：移动所有士兵）
         if from_tile.soldiers > 0:
+            # 检查是否是敌方基地，如果是，记录原始所有者
+            is_enemy_base = False
+            base_owner = None
+            if to_tile.terrain_type == TerrainType.BASE and to_tile.owner is not None and to_tile.owner.id != player_id:
+                is_enemy_base = True
+                for player in self.players.values():
+                    if player.base_position == (to_x, to_y):
+                        base_owner = player
+                        break
+            
             # 处理占领逻辑
             if to_tile.owner is None or to_tile.owner.id != player_id:
                 # 敌方或中立地块
@@ -196,7 +206,8 @@ class GameState:
                     # 移动到未占领地块时至少留下一名士兵
                     if was_neutral:
                         # 未占领地块，至少留下1名士兵
-                        to_tile.soldiers = from_tile.soldiers - to_tile.soldiers
+                        # 移动的士兵数量应该是原士兵数减去留下的1名士兵
+                        to_tile.soldiers = from_tile.soldiers - 1
                         from_tile.soldiers = 1  # 留下1名士兵
                     else:
                         # 敌方地块，全部移动
@@ -211,15 +222,10 @@ class GameState:
                 to_tile.soldiers += from_tile.soldiers
                 from_tile.soldiers = 0
             
-            # 检查是否占领了敌方基地
-            if to_tile.terrain_type == TerrainType.BASE and to_tile.owner is not None:
-                base_owner = None
-                for player in self.players.values():
-                    if player.base_position == (to_x, to_y):
-                        base_owner = player
-                        break
-                
-                if base_owner and base_owner.id != player_id:
+            # 检查是否占领了敌方基地（在士兵抵消后检查）
+            if is_enemy_base and base_owner:
+                # 只有当当前地块的所有者是攻击方时，才算占领成功
+                if to_tile.owner is not None and to_tile.owner.id == player_id:
                     base_owner.is_alive = False
             
             return True
