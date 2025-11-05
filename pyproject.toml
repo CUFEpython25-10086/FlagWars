@@ -8,6 +8,9 @@ authors = [
 readme = "README_ch.md"
 requires-python = ">=3.8"
 license = {text = "GPL-3.0"}
+dependencies = [
+    "tornado>=6.4.2",
+]
 
 [project.scripts]
 flagwars-server = "flagwars.server:main"
@@ -20,5 +23,6 @@ flagwars-server = "flagwars.server:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[project.dependencies]
-tornado = "^6.4"
+dependencies = [
+    "tornado>=6.4"
+]

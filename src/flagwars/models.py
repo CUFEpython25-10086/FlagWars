@@ -36,7 +36,7 @@ class Tile:
     def _get_required_soldiers(self) -> int:
         """获取占领所需士兵数量"""
         if self.terrain_type == TerrainType.PLAIN:
-            return 1
+            return 0  # 平原无需士兵即可占领
         elif self.terrain_type == TerrainType.BASE:
             return 10
         elif self.terrain_type == TerrainType.TOWER:
@@ -44,14 +44,14 @@ class Tile:
         elif self.terrain_type == TerrainType.WALL:
             return 3
         elif self.terrain_type == TerrainType.MOUNTAIN:
-            return 999  # 不可占领
+            return 9999  # 不可占领
         elif self.terrain_type == TerrainType.SWAMP:
-            return 1
-        return 1
+            return 0  # 沼泽无需士兵即可占领
+        return 0
     
     def is_passable(self) -> bool:
         """判断是否可通行"""
-        return self.terrain_type not in [TerrainType.WALL, TerrainType.MOUNTAIN]
+        return self.terrain_type not in [TerrainType.MOUNTAIN]# 不是[TerrainType.MOUNTAIN, TerrainType.WALL]
     
     def can_be_captured(self) -> bool:
         """判断是否可被占领"""
@@ -96,24 +96,28 @@ class GameState:
             x = random.randint(2, self.map_width - 3)
             y = random.randint(2, self.map_height - 3)
             self.tiles[y][x].terrain_type = TerrainType.TOWER
+            self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
         
         # 生成一些城墙
         for _ in range(10):
             x = random.randint(1, self.map_width - 2)
             y = random.randint(1, self.map_height - 2)
             self.tiles[y][x].terrain_type = TerrainType.WALL
+            self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
         
         # 生成一些山脉
         for _ in range(8):
             x = random.randint(1, self.map_width - 2)
             y = random.randint(1, self.map_height - 2)
             self.tiles[y][x].terrain_type = TerrainType.MOUNTAIN
+            self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
         
         # 生成一些沼泽
         for _ in range(6):
             x = random.randint(1, self.map_width - 2)
             y = random.randint(1, self.map_height - 2)
             self.tiles[y][x].terrain_type = TerrainType.SWAMP
+            self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
     
     def add_player(self, player: Player, base_x: int, base_y: int):
         """添加玩家并设置基地"""
@@ -123,6 +127,7 @@ class GameState:
         # 设置基地地形
         base_tile = self.tiles[base_y][base_x]
         base_tile.terrain_type = TerrainType.BASE
+        base_tile.required_soldiers = base_tile._get_required_soldiers()
         base_tile.owner = player
         base_tile.soldiers = 10
     
@@ -169,6 +174,7 @@ class GameState:
     
     def _process_move(self, from_x: int, from_y: int, to_x: int, to_y: int, player_id: int):
         """处理移动操作（实际执行）"""
+        # 验证坐标有效性
         if not (0 <= from_x < self.map_width and 0 <= from_y < self.map_height):
             return False
         if not (0 <= to_x < self.map_width and 0 <= to_y < self.map_height):
@@ -184,56 +190,73 @@ class GameState:
             return False
         
         # 移动士兵（必须至少留下1名士兵在原地）
-        if from_tile.soldiers > 1:  # 只有当士兵数量大于1时才能移动
-            # 检查是否是敌方基地，如果是，记录原始所有者
-            is_enemy_base = False
-            base_owner = None
-            if to_tile.terrain_type == TerrainType.BASE and to_tile.owner is not None and to_tile.owner.id != player_id:
-                is_enemy_base = True
-                for player in self.players.values():
-                    if player.base_position == (to_x, to_y):
-                        base_owner = player
-                        break
-            
-            # 计算可以移动的士兵数量（至少留下1名士兵）
-            movable_soldiers = from_tile.soldiers - 1
-            
-            # 处理占领逻辑
-            if to_tile.owner is None or to_tile.owner.id != player_id:
-                # 敌方或中立地块
-                if to_tile.soldiers < movable_soldiers:
-                    # 占领成功
-                    was_neutral = to_tile.owner is None  # 检查是否是未占领地块
-                    to_tile.owner = from_tile.owner
-                    
-                    # 移动到未占领地块时至少留下一名士兵
-                    if was_neutral:
-                        # 未占领地块，至少留下1名士兵
-                        # 移动的士兵数量应该是可移动士兵数
-                        to_tile.soldiers = movable_soldiers
-                        from_tile.soldiers = 1  # 留下1名士兵
-                    else:
-                        # 敌方地块，移动可移动的士兵
-                        to_tile.soldiers = movable_soldiers - to_tile.soldiers
-                        from_tile.soldiers = 1  # 留下1名士兵
-                else:
-                    # 战斗，双方士兵抵消
-                    to_tile.soldiers -= movable_soldiers
-                    from_tile.soldiers = 1  # 留下1名士兵
-            else:
-                # 友方地块，移动可移动的士兵
-                to_tile.soldiers += movable_soldiers
-                from_tile.soldiers = 1  # 留下1名士兵
-            
-            # 检查是否占领了敌方基地（在士兵抵消后检查）
-            if is_enemy_base and base_owner:
-                # 只有当当前地块的所有者是攻击方时，才算占领成功
-                if to_tile.owner is not None and to_tile.owner.id == player_id:
-                    base_owner.is_alive = False
-            
-            return True
+        if from_tile.soldiers <= 1:  # 只有当士兵数量大于1时才能移动
+            return False
         
-        return False
+        # 检查是否是敌方基地，如果是，记录原始所有者
+        is_enemy_base = False
+        base_owner = None
+        if to_tile.terrain_type == TerrainType.BASE and to_tile.owner is not None and to_tile.owner.id != player_id:
+            is_enemy_base = True
+            for player in self.players.values():
+                if player.base_position == (to_x, to_y):
+                    base_owner = player
+                    break
+        
+        # 计算可以移动的士兵数量（至少留下1名士兵）
+        movable_soldiers = from_tile.soldiers - 1
+        
+        # 统一的占领逻辑
+        if to_tile.owner is None or to_tile.owner.id != player_id:
+            # 敌方或中立地块
+            if to_tile.owner is None:
+                # 未占领地块，视为已有required_soldiers个中立士兵
+                effective_soldiers = to_tile.required_soldiers
+                
+                # 如果required_soldiers为0，直接占领
+                if effective_soldiers == 0:
+                    to_tile.owner = from_tile.owner
+                    to_tile.soldiers = movable_soldiers
+                elif movable_soldiers > effective_soldiers:
+                    # 攻击方士兵数量大于防守方，占领成功
+                    to_tile.owner = from_tile.owner
+                    to_tile.soldiers = movable_soldiers - effective_soldiers
+                elif movable_soldiers == effective_soldiers:
+                    # 双方士兵数量相等，同归于尽，地块变为中立
+                    to_tile.owner = None
+                    to_tile.soldiers = 0
+                else:
+                    # 攻击方士兵数量小于防守方，防守方获胜
+                    to_tile.owner = None
+                    to_tile.soldiers = effective_soldiers - movable_soldiers
+            else:
+                # 敌方地块
+                if movable_soldiers > to_tile.soldiers:
+                    # 攻击方士兵数量大于防守方，占领成功
+                    to_tile.owner = from_tile.owner
+                    to_tile.soldiers = movable_soldiers - to_tile.soldiers
+                elif movable_soldiers == to_tile.soldiers:
+                    # 双方士兵数量相等，同归于尽，地块变为中立
+                    to_tile.owner = None
+                    to_tile.soldiers = 0
+                else:
+                    # 攻击方士兵数量小于防守方，防守方获胜
+                    to_tile.soldiers -= movable_soldiers
+            
+            # 原地留下1名士兵
+            from_tile.soldiers = 1
+        else:
+            # 友方地块，移动可移动的士兵
+            to_tile.soldiers += movable_soldiers
+            from_tile.soldiers = 1
+        
+        # 检查是否占领了敌方基地（在士兵抵消后检查）
+        if is_enemy_base and base_owner:
+            # 只有当当前地块的所有者是攻击方时，才算占领成功
+            if to_tile.owner is not None and to_tile.owner.id == player_id:
+                base_owner.is_alive = False
+        
+        return True
     
     def _generate_soldiers(self):
         """根据地形生成士兵"""

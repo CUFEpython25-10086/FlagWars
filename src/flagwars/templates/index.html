@@ -590,6 +590,17 @@
                         screen_y + this.tile_size / 2 + 4
                     );
                 }
+                // 如果地形没有所有者且可被占领，显示占领所需士兵数量
+                else if (!tile.owner_id && tile.required_soldiers && tile.required_soldiers < 9999) {
+                    this.ctx.fillStyle = "yellow";
+                    this.ctx.font = "10px Arial";
+                    this.ctx.textAlign = "center";
+                    this.ctx.fillText(
+                        `${tile.required_soldiers}`,
+                        screen_x + this.tile_size / 2,
+                        screen_y + this.tile_size / 2 + 4
+                    );
+                }
             }
             
             render_selection() {
