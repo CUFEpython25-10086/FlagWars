@@ -217,10 +217,18 @@ class GameState:
                 if effective_soldiers == 0:
                     to_tile.owner = from_tile.owner
                     to_tile.soldiers = movable_soldiers
+                    # 如果是墙，被占领后变为平原
+                    if to_tile.terrain_type == TerrainType.WALL:
+                        to_tile.terrain_type = TerrainType.PLAIN
+                        to_tile.required_soldiers = 0  # 平原无需士兵即可占领
                 elif movable_soldiers > effective_soldiers:
                     # 攻击方士兵数量大于防守方，占领成功
                     to_tile.owner = from_tile.owner
                     to_tile.soldiers = movable_soldiers - effective_soldiers
+                    # 如果是墙，被占领后变为平原
+                    if to_tile.terrain_type == TerrainType.WALL:
+                        to_tile.terrain_type = TerrainType.PLAIN
+                        to_tile.required_soldiers = 0  # 平原无需士兵即可占领
                 elif movable_soldiers == effective_soldiers:
                     # 双方士兵数量相等，同归于尽，地块变为中立
                     to_tile.owner = None

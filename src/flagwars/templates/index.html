@@ -559,7 +559,14 @@
                     "swamp": "#16a085"      // 沼泽 - 青色
                 };
                 
-                const color = terrain_colors[tile.terrain_type] || "#34495e";
+                // 如果是塔且有所有者，使用玩家颜色
+                let color;
+                if (tile.terrain_type === "tower" && tile.owner_id) {
+                    const player = this.game_state.players[tile.owner_id];
+                    color = player ? player.color : terrain_colors[tile.terrain_type];
+                } else {
+                    color = terrain_colors[tile.terrain_type] || "#34495e";
+                }
                 
                 // 绘制地块
                 this.ctx.fillStyle = color;
