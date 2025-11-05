@@ -549,9 +549,21 @@ def main():
     
     app = make_app()
     server = httpserver.HTTPServer(app)
-    server.listen(8888)
+    server.listen(8888, address='0.0.0.0')
+    
+    # 获取本机IP地址
+    import socket
+    try:
+        # 连接到外部地址（不实际发送数据）来获取本机IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+    except:
+        local_ip = "未知"
     
     logging.info("FlagWars服务器启动在 http://localhost:8888")
+    logging.info(f"局域网访问地址: http://{local_ip}:8888")
     logging.info("按 Ctrl+C 停止服务器")
     
     try:
