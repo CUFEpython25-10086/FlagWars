@@ -200,6 +200,7 @@
                 this.player_id = null;
                 this.game_id = null;
                 this.selected_tile = null;
+                this.pending_selected_tile = null; // 初始化待处理的选中位置
                 this.state_update_interval = null;
                 
                 this.canvas = document.getElementById("gameCanvas");
@@ -302,6 +303,7 @@
                 this.game_id = data.game_id;
                 this.player_id = data.player_id;
                 this.game_state = data.game_state;
+                this.pending_selected_tile = null; // 初始化待处理的选中位置
                 
                 document.getElementById("gameStatus").textContent = `游戏已加入 - 玩家 ${this.player_id}`;
                 
@@ -328,6 +330,7 @@
                 this.player_id = null;
                 this.game_state = null;
                 this.selected_tile = null;
+                this.pending_selected_tile = null; // 重置待处理的选中位置
                 
                 // 停止定期获取游戏状态
                 this.stop_state_updates();
@@ -350,8 +353,15 @@
                 
                 if (success) {
                     document.getElementById("gameStatus").textContent = "移动成功";
+                    // 只有在移动成功时才更新选中位置
+                    if (this.pending_selected_tile) {
+                        this.selected_tile = this.pending_selected_tile;
+                        this.pending_selected_tile = null;
+                    }
                 } else {
                     document.getElementById("gameStatus").textContent = "移动失败";
+                    // 移动失败时清除待处理的位置
+                    this.pending_selected_tile = null;
                 }
                 
                 this.render();
@@ -445,6 +455,7 @@
                 this.player_id = null;
                 this.game_state = null;
                 this.selected_tile = null;
+                this.pending_selected_tile = null; // 重置待处理的选中位置
                 
                 // 隐藏准备按钮
                 document.getElementById("readyBtn").style.display = "none";
@@ -491,22 +502,29 @@
                 
                 switch(event.key) {
                     case "ArrowUp":
-                        new_y = Math.max(0, y - 1);
+                        new_y = y - 1;
                         break;
                     case "ArrowDown":
-                        new_y = Math.min(this.game_state.map_height - 1, y + 1);
+                        new_y = y + 1;
                         break;
                     case "ArrowLeft":
-                        new_x = Math.max(0, x - 1);
+                        new_x = x - 1;
                         break;
                     case "ArrowRight":
-                        new_x = Math.min(this.game_state.map_width - 1, x + 1);
+                        new_x = x + 1;
                         break;
                     default:
                         return;
                 }
                 
                 event.preventDefault();
+                
+                // 检查是否在地图边界内
+                if (new_x < 0 || new_x >= this.game_state.map_width || 
+                    new_y < 0 || new_y >= this.game_state.map_height) {
+                    document.getElementById("gameStatus").textContent = "无法移动";
+                    return;
+                }
                 
                 // 尝试移动士兵到新位置
                 this.move_soldiers_to(new_x, new_y);
@@ -531,6 +549,9 @@
                     return;
                 }
                 
+                // 存储目标位置，用于在移动成功后更新选中框
+                this.pending_selected_tile = [to_x, to_y];
+                
                 // 发送移动请求
                 this.ws.send(JSON.stringify({
                     type: "move_soldiers",
@@ -540,11 +561,6 @@
                     to_y: to_y,
                     player_id: this.player_id
                 }));
-                
-                // 移动后更新选中位置到新位置，实现连续操作
-                this.selected_tile = [to_x, to_y];
-                document.getElementById("gameStatus").textContent = 
-                    `移动士兵到 (${to_x}, ${to_y})`;
             }
             
             render() {

@@ -31,6 +31,7 @@ FlagWars 是一款现代化的*夺旗*游戏。在这个游戏中，每个玩家
 进攻、防守、合作与背叛……利用一切机会赢得胜利！
 
 # 技术栈
-使用python开发
-服务端：Tornado
-客户端：Brython + HTML5 Canvas
+
+- **服务端**：Python + Tornado（WebSocket通信）
+- **客户端**：HTML5 Canvas + Brython（Python in Browser）
+- **包管理**：uv（现代Python包管理器）
