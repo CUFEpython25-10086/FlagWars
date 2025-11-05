@@ -79,7 +79,7 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
             'room_id': room_id,
             'game_id': game_id,
             'player_id': player_id,
-            'game_state': self.game_manager.get_game_state(game_id)
+            'game_state': self.game_manager.get_game_state(game_id, player_id)
         }
         self.write_message(json.dumps(response, default=str))
     
@@ -118,7 +118,7 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
             'room_id': room_id,
             'game_id': game_id,
             'player_id': player_id,
-            'game_state': self.game_manager.get_game_state(game_id)
+            'game_state': self.game_manager.get_game_state(game_id, player_id)
         }
         self.write_message(json.dumps(response, default=str))
     
@@ -203,7 +203,7 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
         response = {
             'type': 'move_result',
             'success': success,
-            'game_state': self.game_manager.get_game_state(self.game_id)
+            'game_state': self.game_manager.get_game_state(self.game_id, self.player_id)
         }
         self.write_message(json.dumps(response, default=str))
     
@@ -215,7 +215,7 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
         
         response = {
             'type': 'game_state',
-            'game_state': self.game_manager.get_game_state(self.game_id)
+            'game_state': self.game_manager.get_game_state(self.game_id, self.player_id)
         }
         self.write_message(json.dumps(response, default=str))
     
@@ -261,6 +261,7 @@ class GameManager:
     def __init__(self):
         self.games: Dict[str, GameState] = {}
         self.players: Dict[str, Dict[int, GameWebSocketHandler]] = {}
+        self.connections: Dict[str, Dict[int, GameWebSocketHandler]] = {}  # 修复：添加connections属性
         self.player_ready_states: Dict[str, Dict[int, bool]] = {}  # 玩家准备状态
         self.next_player_id = 1
         self.next_room_id = 1000  # 房间ID从1000开始
@@ -351,7 +352,18 @@ class GameManager:
         """添加玩家连接"""
         if game_id not in self.players:
             self.players[game_id] = {}
+        if game_id not in self.connections:
+            self.connections[game_id] = {}
+            
         self.players[game_id][player_id] = handler
+        self.connections[game_id][player_id] = handler
+    
+    def remove_player_connection(self, game_id: str, player_id: int):
+        """移除玩家连接"""
+        if game_id in self.players and player_id in self.players[game_id]:
+            del self.players[game_id][player_id]
+        if game_id in self.connections and player_id in self.connections[game_id]:
+            del self.connections[game_id][player_id]
 
     def set_player_ready(self, game_id: str, player_id: int) -> bool:
         """设置玩家准备状态，返回游戏是否开始"""
@@ -371,6 +383,8 @@ class GameManager:
         # 如果至少有2个玩家、所有玩家都准备且游戏未开始，则开始游戏
         if total_players >= 2 and all_players_ready and game_id in self.games and not self.games[game_id].game_started:
             self.games[game_id].game_started = True
+            # 游戏开始时初始化战争迷雾
+            self.games[game_id].update_fog_of_war()
             logging.info(f"游戏 {game_id} 开始!")
             return True
         
@@ -421,6 +435,30 @@ class GameManager:
             if handler and pid != player_id:
                 handler.write_message(json.dumps(message, default=str))
     
+    def broadcast_game_state(self, game_id: str):
+        """向房间内所有玩家广播游戏状态"""
+        if game_id not in self.games:
+            return
+        
+        game = self.games[game_id]
+        
+        # 为每个玩家发送个性化的游戏状态
+        for player_id, player in game.players.items():
+            if player_id in self.connections[game_id]:
+                handler = self.connections[game_id][player_id]
+                # 为每个玩家获取个性化的游戏状态（包含战争迷雾）
+                personalized_state = self.get_game_state(game_id, player_id)
+                response = {
+                    'type': 'game_state',
+                    'game_state': personalized_state
+                }
+                try:
+                    handler.write_message(json.dumps(response, default=str))
+                except Exception as e:
+                    print(f"Error sending game state to player {player_id}: {e}")
+                    # 连接可能已断开，移除连接
+                    self.remove_player_connection(game_id, player_id)
+    
     def move_soldiers(self, game_id: str, player_id: int, from_x: int, from_y: int, to_x: int, to_y: int) -> bool:
         """移动士兵"""
         if game_id not in self.games:
@@ -429,7 +467,7 @@ class GameManager:
         game_state = self.games[game_id]
         return game_state.move_soldiers(from_x, from_y, to_x, to_y, player_id)
     
-    def get_game_state(self, game_id: str) -> dict:
+    def get_game_state(self, game_id: str, player_id: int = None) -> dict:
         """获取游戏状态"""
         if game_id not in self.games:
             return {}
@@ -442,6 +480,7 @@ class GameManager:
             'map_height': game_state.map_height,
             'current_tick': game_state.current_tick,
             'game_over': game_state.game_over,
+            'game_started': game_state.game_started,
             'winner': game_state.winner.name if game_state.winner else None,
             'tiles': [],
             'players': {}
@@ -452,25 +491,43 @@ class GameManager:
             row = []
             for x in range(game_state.map_width):
                 tile = game_state.tiles[y][x]
-                row.append({
-                    'x': tile.x,
-                    'y': tile.y,
-                    'terrain_type': tile.terrain_type.value,
-                    'owner_id': tile.owner.id if tile.owner else None,
-                    'soldiers': tile.soldiers,
-                    'required_soldiers': tile.required_soldiers
-                })
+                
+                # 如果指定了玩家ID且该地块对玩家不可见，则隐藏详细信息
+                if player_id and player_id in tile.visibility and not tile.visibility.get(player_id, False):
+                    # 对于不可见的地块，只显示基本地形信息，隐藏所有者和士兵数量
+                    tile_data = {
+                        'x': tile.x,
+                        'y': tile.y,
+                        'terrain_type': 'plain',  # 不可见区域显示为平原
+                        'owner_id': None,
+                        'soldiers': 0,
+                        'required_soldiers': 0,
+                        'is_fog': True  # 标记为战争迷雾区域
+                    }
+                else:
+                    # 对于可见的地块，显示完整信息
+                    tile_data = {
+                        'x': tile.x,
+                        'y': tile.y,
+                        'terrain_type': tile.terrain_type.value,
+                        'owner_id': tile.owner.id if tile.owner else None,
+                        'soldiers': tile.soldiers,
+                        'required_soldiers': tile.required_soldiers,
+                        'is_fog': False  # 标记为非战争迷雾区域
+                    }
+                
+                row.append(tile_data)
             state_dict['tiles'].append(row)
         
         # 序列化玩家，包含准备状态
-        for player_id, player in game_state.players.items():
-            state_dict['players'][player_id] = {
+        for pid, player in game_state.players.items():
+            state_dict['players'][pid] = {
                 'id': player.id,
                 'name': player.name,
                 'color': player.color,
                 'base_position': player.base_position,
                 'is_alive': player.is_alive,
-                'ready': self.player_ready_states.get(game_id, {}).get(player_id, False)
+                'ready': self.player_ready_states.get(game_id, {}).get(pid, False)
             }
         
         return state_dict
@@ -538,6 +595,9 @@ class GameManager:
         # 重置所有玩家的准备状态为False
         for player_id in self.player_ready_states[game_id]:
             self.player_ready_states[game_id][player_id] = False
+        
+        # 广播游戏重置后的状态给所有玩家
+        self.broadcast_game_state(game_id)
         
         return True
 

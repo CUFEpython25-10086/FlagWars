@@ -32,6 +32,8 @@ class Tile:
         self.owner: Optional[Player] = None
         self.soldiers: int = 0
         self.required_soldiers = self._get_required_soldiers()
+        # 战争迷雾：记录每个玩家是否可见此地块 {player_id: bool}
+        self.visibility: Dict[int, bool] = {}
     
     def _get_required_soldiers(self) -> int:
         """获取占领所需士兵数量"""
@@ -70,8 +72,8 @@ class GameState:
         self.game_started = False  # 添加游戏开始状态
         self.winner: Optional[Player] = None
         
-        # 操作日志队列，每个tick执行一个操作
-        self.pending_moves: List[Dict] = []
+        # 操作日志队列，按玩家ID组织，每个玩家有自己的操作队列
+        self.pending_moves: Dict[int, List[Dict]] = {}
         
         self._initialize_map()
     
@@ -130,6 +132,9 @@ class GameState:
         self.players[player.id] = player
         player.base_position = (base_x, base_y)
         
+        # 为新玩家初始化操作队列
+        self.pending_moves[player.id] = []
+        
         # 设置基地地形
         base_tile = self.tiles[base_y][base_x]
         base_tile.terrain_type = TerrainType.BASE
@@ -162,21 +167,25 @@ class GameState:
         # 生成士兵
         self._generate_soldiers()
         
+        # 更新战争迷雾
+        self.update_fog_of_war()
+        
         # 检查游戏结束条件
         self._check_game_over()
     
     def _execute_pending_move(self):
-        """执行一个待处理的移动操作"""
-        if not self.pending_moves:
-            return
-        
-        # 取出第一个操作并执行
-        move_data = self.pending_moves.pop(0)
-        self._process_move(
-            move_data['from_x'], move_data['from_y'],
-            move_data['to_x'], move_data['to_y'],
-            move_data['player_id']
-        )
+        """执行所有玩家待处理的移动操作"""
+        # 遍历所有玩家的操作队列
+        for player_id, moves in self.pending_moves.items():
+            # 如果该玩家有待处理的操作
+            if moves:
+                # 取出第一个操作并执行
+                move_data = moves.pop(0)
+                self._process_move(
+                    move_data['from_x'], move_data['from_y'],
+                    move_data['to_x'], move_data['to_y'],
+                    move_data['player_id']
+                )
     
     def _process_move(self, from_x: int, from_y: int, to_x: int, to_y: int, player_id: int):
         """处理移动操作（实际执行）"""
@@ -292,6 +301,38 @@ class GameState:
                         # 沼泽每个游戏刻减少一个士兵
                         tile.soldiers = max(0, tile.soldiers - 1)
     
+    def update_fog_of_war(self):
+        """更新战争迷雾"""
+        # 首先将所有地块的可见性重置为False
+        for row in self.tiles:
+            for tile in row:
+                for player_id in self.players:
+                    tile.visibility[player_id] = False
+        
+        # 为每个玩家计算可见范围
+        for player_id, player in self.players.items():
+            # 找出该玩家拥有的所有地块
+            owned_tiles = []
+            for row in self.tiles:
+                for tile in row:
+                    if tile.owner and tile.owner.id == player_id:
+                        owned_tiles.append(tile)
+            
+            # 对于每个拥有的地块，设置周围一定范围为可见
+            for tile in owned_tiles:
+                self._set_visibility_around_tile(tile, player_id)
+    
+    def _set_visibility_around_tile(self, center_tile: Tile, player_id: int, vision_range: int = 2):
+        """设置指定地块周围的可见范围"""
+        for y in range(max(0, center_tile.y - vision_range), 
+                      min(self.map_height, center_tile.y + vision_range + 1)):
+            for x in range(max(0, center_tile.x - vision_range), 
+                          min(self.map_width, center_tile.x + vision_range + 1)):
+                # 计算曼哈顿距离
+                distance = abs(x - center_tile.x) + abs(y - center_tile.y)
+                if distance <= vision_range:
+                    self.tiles[y][x].visibility[player_id] = True
+    
     def _check_game_over(self):
         """检查游戏是否结束"""
         alive_players = [p for p in self.players.values() if p.is_alive]
@@ -320,8 +361,11 @@ class GameState:
         if not to_tile.is_passable():
             return False
         
-        # 将移动操作添加到队列
-        self.pending_moves.append({
+        # 将移动操作添加到对应玩家的队列中
+        if player_id not in self.pending_moves:
+            self.pending_moves[player_id] = []
+        
+        self.pending_moves[player_id].append({
             'from_x': from_x,
             'from_y': from_y,
             'to_x': to_x,

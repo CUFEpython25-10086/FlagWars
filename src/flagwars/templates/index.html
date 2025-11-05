@@ -654,6 +654,13 @@
                     
                     const tile = this.game_state.tiles[tile_y][tile_x];
                     
+                    // 检查地块是否在战争迷雾中
+                    if (tile.is_fog === true) {
+                        document.getElementById("gameStatus").textContent = 
+                            `无法选中战争迷雾中的地块 (${tile_x}, ${tile_y})`;
+                        return;
+                    }
+                    
                     // 只选中格子，不执行移动操作
                     this.selected_tile = [tile_x, tile_y];
                     document.getElementById("gameStatus").textContent = 
@@ -734,6 +741,14 @@
                     return;
                 }
                 
+                // 检查目标地块是否在战争迷雾中
+                const to_tile = this.game_state.tiles[to_y][to_x];
+                if (to_tile.is_fog === true) {
+                    document.getElementById("gameStatus").textContent = 
+                        "无法移动到战争迷雾中的地块";
+                    return;
+                }
+                
                 // 存储目标位置，用于在移动成功后更新选中框
                 this.pending_selected_tile = [to_x, to_y];
                 
@@ -805,6 +820,13 @@
                     return;
                 }
                 
+                // 如果游戏未开始，显示等待界面
+                if (!this.game_state.game_started) {
+                    this.render_waiting_screen();
+                    this.render_players_list();
+                    return;
+                }
+                
                 this.ctx.clearRect(0, 0, this.canvas_width, this.canvas_height);
                 
                 // 渲染地图
@@ -841,9 +863,15 @@
                     "swamp": "#16a085"      // 沼泽 - 青色
                 };
                 
+                // 检查是否在战争迷雾中
+                const is_fog = tile.is_fog === true;
+                
                 // 如果地块有所有者，使用玩家颜色作为主色调
                 let color;
-                if (tile.owner_id) {
+                if (is_fog) {
+                    // 战争迷雾中的地块显示为暗色
+                    color = "#1a1a1a";
+                } else if (tile.owner_id) {
                     const player = this.game_state.players[tile.owner_id];
                     if (player) {
                         // 使用玩家颜色作为地块主色调
@@ -860,12 +888,17 @@
                 this.ctx.fillRect(screen_x, screen_y, this.tile_size, this.tile_size);
                 
                 // 绘制边框
-                this.ctx.strokeStyle = "#2c3e50";
+                if (is_fog) {
+                    // 战争迷雾中的地块使用暗色边框
+                    this.ctx.strokeStyle = "#0a0a0a";
+                } else {
+                    this.ctx.strokeStyle = "#2c3e50";
+                }
                 this.ctx.lineWidth = 1;
                 this.ctx.strokeRect(screen_x, screen_y, this.tile_size, this.tile_size);
                 
                 // 如果是基地或塔楼且有所有者，添加特殊边框标识
-                if ((tile.terrain_type === "base" || tile.terrain_type === "tower") && tile.owner_id) {
+                if (!is_fog && (tile.terrain_type === "base" || tile.terrain_type === "tower") && tile.owner_id) {
                     // 己方基地和塔楼使用特殊边框
                     if (tile.owner_id === this.player_id) {
                         // 己方基地用金色边框，己方塔楼用银色边框
@@ -879,27 +912,39 @@
                     this.ctx.strokeRect(screen_x + 2, screen_y + 2, this.tile_size - 4, this.tile_size - 4);
                 }
                 
-                // 绘制士兵数量
-                if (tile.soldiers > 0) {
-                    this.ctx.fillStyle = "white";
-                    this.ctx.font = "12px Arial";
-                    this.ctx.textAlign = "center";
-                    this.ctx.fillText(
-                        tile.soldiers.toString(),
-                        screen_x + this.tile_size / 2,
-                        screen_y + this.tile_size / 2 + 4
-                    );
-                }
-                // 如果地形没有所有者且可被占领，显示占领所需士兵数量
-                else if (!tile.owner_id && tile.required_soldiers && tile.required_soldiers < 9999) {
-                    this.ctx.fillStyle = "yellow";
-                    this.ctx.font = "10px Arial";
-                    this.ctx.textAlign = "center";
-                    this.ctx.fillText(
-                        `${tile.required_soldiers}`,
-                        screen_x + this.tile_size / 2,
-                        screen_y + this.tile_size / 2 + 4
-                    );
+                // 绘制士兵数量（仅在非战争迷雾中显示）
+                if (!is_fog) {
+                    if (tile.soldiers > 0) {
+                        // 有士兵时显示士兵数量
+                        this.ctx.fillStyle = "white";
+                        this.ctx.font = "12px Arial";
+                        this.ctx.textAlign = "center";
+                        this.ctx.fillText(
+                            tile.soldiers.toString(),
+                            screen_x + this.tile_size / 2,
+                            screen_y + this.tile_size / 2 + 4
+                        );
+                    } else if (tile.soldiers === 0 && tile.owner_id) {
+                        // 士兵被完全抵消但仍有所有者时，显示0
+                        this.ctx.fillStyle = "white";
+                        this.ctx.font = "12px Arial";
+                        this.ctx.textAlign = "center";
+                        this.ctx.fillText(
+                            "0",
+                            screen_x + this.tile_size / 2,
+                            screen_y + this.tile_size / 2 + 4
+                        );
+                    } else if (!tile.owner_id && tile.required_soldiers && tile.required_soldiers < 9999) {
+                        // 没有所有者且可被占领时，显示占领所需士兵数量
+                        this.ctx.fillStyle = "yellow";
+                        this.ctx.font = "10px Arial";
+                        this.ctx.textAlign = "center";
+                        this.ctx.fillText(
+                            `${tile.required_soldiers}`,
+                            screen_x + this.tile_size / 2,
+                            screen_y + this.tile_size / 2 + 4
+                        );
+                    }
                 }
             }
             
@@ -946,7 +991,39 @@
                 this.ctx.fillStyle = "white";
                 this.ctx.font = "24px Arial";
                 this.ctx.textAlign = "center";
-                this.ctx.fillText("等待加入游戏...", this.canvas_width / 2, this.canvas_height / 2);
+                
+                // 根据游戏状态显示不同的等待信息
+                if (!this.game_state) {
+                    this.ctx.fillText("等待加入游戏...", this.canvas_width / 2, this.canvas_height / 2);
+                } else if (!this.game_state.game_started) {
+                    // 显示游戏未开始的信息
+                    const ready_players = Object.values(this.game_state.players).filter(p => p.ready).length;
+                    const total_players = Object.keys(this.game_state.players).length;
+                    
+                    if (total_players < 2) {
+                        this.ctx.fillText(`等待其他玩家加入 (${total_players}/2)`, this.canvas_width / 2, this.canvas_height / 2 - 30);
+                    } else {
+                        this.ctx.fillText(`等待玩家准备 (${ready_players}/${total_players})`, this.canvas_width / 2, this.canvas_height / 2 - 30);
+                    }
+                    
+                    // 显示玩家列表
+                    let y_offset = 20;
+                    this.ctx.font = "18px Arial";
+                    for (const [player_id, player] of Object.entries(this.game_state.players)) {
+                        const status = player.ready ? "已准备" : "未准备";
+                        const color = player.ready ? "#27ae60" : "#e74c3c";
+                        
+                        this.ctx.fillStyle = player.color;
+                        this.ctx.fillRect(this.canvas_width / 2 - 100, this.canvas_height / 2 + y_offset, 15, 15);
+                        
+                        this.ctx.fillStyle = color;
+                        this.ctx.fillText(`${player.name}: ${status}`, this.canvas_width / 2 + 20, this.canvas_height / 2 + y_offset + 12);
+                        
+                        y_offset += 25;
+                    }
+                } else {
+                    this.ctx.fillText("等待加入游戏...", this.canvas_width / 2, this.canvas_height / 2);
+                }
             }
             
             // 开始定期获取游戏状态
