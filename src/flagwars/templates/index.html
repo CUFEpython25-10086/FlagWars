@@ -151,7 +151,20 @@
                     <h3>玩家设置</h3>
                     <input type="text" id="playerName" placeholder="输入玩家名称" value="玩家1">
                     <input type="color" id="playerColor" value="#FF0000">
-                    <button id="joinGame">加入游戏</button>
+                    
+                    <div id="roomControls">
+                        <button id="createRoom">创建房间</button>
+                        <button id="joinRoom">加入房间</button>
+                        <input type="text" id="roomId" placeholder="输入房间ID" style="display: none;">
+                        <button id="confirmJoinRoom" style="display: none;">确认加入</button>
+                    </div>
+                    
+                    <div id="roomList" style="display: none;">
+                        <h4>可用房间</h4>
+                        <div id="roomsList"></div>
+                    </div>
+                    
+                    <button id="joinGame" style="display: none;">加入游戏</button>
                     <button id="readyBtn" style="display: none; background-color: #ff6b6b;">准备</button>
                     <div class="status" id="connectionStatus">未连接</div>
                 </div>
@@ -215,6 +228,15 @@
             }
             
             setup_event_listeners() {
+                // 创建房间按钮
+                document.getElementById("createRoom").addEventListener("click", (e) => this.create_room(e));
+                
+                // 加入房间按钮
+                document.getElementById("joinRoom").addEventListener("click", (e) => this.show_join_room_input(e));
+                
+                // 确认加入房间按钮
+                document.getElementById("confirmJoinRoom").addEventListener("click", (e) => this.join_specific_room(e));
+                
                 // 加入游戏按钮
                 document.getElementById("joinGame").addEventListener("click", (e) => this.join_game(e));
                 
@@ -282,6 +304,8 @@
                         this.handle_game_joined(data);
                     } else if (message_type === "join_rejected") {
                         this.handle_join_rejected(data);
+                    } else if (message_type === "join_room_failed") {
+                        this.handle_join_room_failed(data);
                     } else if (message_type === "game_state") {
                         this.handle_game_state(data);
                     } else if (message_type === "move_result") {
@@ -291,7 +315,17 @@
                     } else if (message_type === "player_ready_updated") {
                         this.handle_player_ready_updated(data);
                     } else if (message_type === "game_started") {
-                        this.handle_game_started(data);
+                    this.handle_game_started(data);
+                } else if (message_type === "game_reset") {
+                    this.handle_game_reset(data);
+                } else if (message_type === "play_again_success") {
+                    this.handle_play_again_success(data);
+                } else if (message_type === "room_created") {
+                        this.handle_room_created(data);
+                    } else if (message_type === "room_joined") {
+                        this.handle_room_joined(data);
+                    } else if (message_type === "rooms_list") {
+                        this.handle_rooms_list(data);
                     }
                     
                 } catch (e) {
@@ -332,14 +366,35 @@
                 this.selected_tile = null;
                 this.pending_selected_tile = null; // 重置待处理的选中位置
                 
+                // 重新启用用户名输入框
+                document.getElementById("playerName").disabled = false;
+                
+                // 显示房间控件
+                document.getElementById("roomControls").style.display = "block";
+                document.getElementById("roomList").style.display = "none";
+                document.getElementById("roomId").style.display = "none";
+                document.getElementById("confirmJoinRoom").style.display = "none";
+                document.getElementById("joinRoom").style.display = "block";
+                
+                // 隐藏准备按钮
+                document.getElementById("readyBtn").style.display = "none";
+                
                 // 停止定期获取游戏状态
                 this.stop_state_updates();
                 
-                // 禁用准备按钮
-                document.getElementById("readyBtn").style.display = "none";
-                
                 // 重新渲染空画布
                 this.render();
+            }
+            
+            handle_join_room_failed(data) {
+                const { reason } = data;
+                alert(`加入房间失败: ${reason}`);
+                document.getElementById("gameStatus").textContent = `加入房间失败: ${reason}`;
+                
+                // 重新显示加入房间按钮
+                document.getElementById("roomId").style.display = "none";
+                document.getElementById("confirmJoinRoom").style.display = "none";
+                document.getElementById("joinRoom").style.display = "block";
             }
             
             handle_game_state(data) {
@@ -446,6 +501,24 @@
                 this.render();
             }
             
+            // 处理游戏重置
+            handle_game_reset(data) {
+                this.game_state = data.game_state;
+                this.selected_tile = null;
+                this.pending_selected_tile = null;
+                
+                document.getElementById("gameStatus").textContent = "游戏已重置，请准备开始新一局";
+                document.getElementById("readyBtn").style.display = "inline-block";
+                document.getElementById("readyBtn").textContent = "准备";
+                document.getElementById("readyBtn").style.backgroundColor = "#ff6b6b";
+                document.getElementById("readyBtn").disabled = false;  // 重置准备按钮为可点击状态
+            }
+            
+            // 处理再来一局成功
+            handle_play_again_success(data) {
+                document.getElementById("gameStatus").textContent = data.message;
+            }
+            
             on_ws_close(event) {
                 document.getElementById("connectionStatus").textContent = "连接已关闭";
                 document.getElementById("gameStatus").textContent = "游戏连接断开";
@@ -456,6 +529,16 @@
                 this.game_state = null;
                 this.selected_tile = null;
                 this.pending_selected_tile = null; // 重置待处理的选中位置
+                
+                // 重新启用用户名输入框
+                document.getElementById("playerName").disabled = false;
+                
+                // 显示房间控件
+                document.getElementById("roomControls").style.display = "block";
+                document.getElementById("roomList").style.display = "none";
+                document.getElementById("roomId").style.display = "none";
+                document.getElementById("confirmJoinRoom").style.display = "none";
+                document.getElementById("joinRoom").style.display = "block";
                 
                 // 隐藏准备按钮
                 document.getElementById("readyBtn").style.display = "none";
@@ -474,6 +557,24 @@
             handle_canvas_click(event) {
                 if (!this.game_state) return;
                 
+                // 如果游戏结束，检查是否点击了"再来一局"按钮
+                if (this.game_state.game_over) {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const x = event.clientX - rect.left;
+                    const y = event.clientY - rect.top;
+                    
+                    // 检查点击位置是否在"再来一局"按钮范围内
+                    const button_left = this.canvas_width / 2 - 100;
+                    const button_right = this.canvas_width / 2 + 100;
+                    const button_top = this.canvas_height / 2 + 20;
+                    const button_bottom = this.canvas_height / 2 + 70;
+                    
+                    if (x >= button_left && x <= button_right && y >= button_top && y <= button_bottom) {
+                        this.play_again();
+                        return;
+                    }
+                }
+                
                 const rect = this.canvas.getBoundingClientRect();
                 const x = event.clientX - rect.left;
                 const y = event.clientY - rect.top;
@@ -491,6 +592,23 @@
                     document.getElementById("gameStatus").textContent = 
                         `选中地块 (${tile_x}, ${tile_y}) - 士兵: ${tile.soldiers}`;
                 }
+            }
+            
+            // 再来一局
+            play_again() {
+                if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                    document.getElementById("gameStatus").textContent = "连接已断开，无法重新开始";
+                    return;
+                }
+                
+                // 发送重新开始游戏请求
+                const play_again_message = {
+                    "type": "play_again",
+                    "player_id": this.player_id
+                };
+                
+                this.ws.send(JSON.stringify(play_again_message));
+                document.getElementById("gameStatus").textContent = "请求重新开始游戏...";
             }
             
             handle_keyboard(event) {
@@ -539,7 +657,7 @@
                 // 检查源地块是否属于当前玩家且有士兵
                 if (from_tile.owner_id !== this.player_id || from_tile.soldiers <= 0) {
                     document.getElementById("gameStatus").textContent = 
-                        "无法移动：源地块不是您的或没有士兵";
+                        "无法移动";
                     return;
                 }
                 
@@ -674,10 +792,18 @@
                     this.ctx.textAlign = "center";
                     
                     if (winner) {
-                        this.ctx.fillText(`${winner} 获胜！`, this.canvas_width / 2, this.canvas_height / 2);
+                        this.ctx.fillText(`${winner} 获胜！`, this.canvas_width / 2, this.canvas_height / 2 - 50);
                     } else {
-                        this.ctx.fillText("游戏结束", this.canvas_width / 2, this.canvas_height / 2);
+                        this.ctx.fillText("游戏结束", this.canvas_width / 2, this.canvas_height / 2 - 50);
                     }
+                    
+                    // 添加"再来一局"按钮
+                    this.ctx.fillStyle = "#4CAF50";
+                    this.ctx.fillRect(this.canvas_width / 2 - 100, this.canvas_height / 2 + 20, 200, 50);
+                    
+                    this.ctx.fillStyle = "white";
+                    this.ctx.font = "24px Arial";
+                    this.ctx.fillText("再来一局", this.canvas_width / 2, this.canvas_height / 2 + 50);
                 }
             }
             
@@ -713,6 +839,214 @@
                     clearInterval(this.state_update_interval);
                     this.state_update_interval = null;
                 }
+            }
+            
+            // 创建房间
+            create_room(event) {
+                // 如果已经连接或已加入游戏，则不执行任何操作
+                if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+                    if (this.player_id) {
+                        document.getElementById("gameStatus").textContent = "您已经加入了游戏";
+                    } else {
+                        document.getElementById("gameStatus").textContent = "正在连接中，请稍候";
+                    }
+                    return;
+                }
+                
+                const player_name = document.getElementById("playerName").value;
+                const player_color = document.getElementById("playerColor").value;
+                
+                // 创建WebSocket连接
+                const ws_protocol = window.location.protocol === "https:" ? "wss" : "ws";
+                const ws_url = `${ws_protocol}://${window.location.host}/ws`;
+                
+                try {
+                    this.ws = new WebSocket(ws_url);
+                    
+                    this.ws.onopen = (e) => {
+                        document.getElementById("connectionStatus").textContent = "已连接";
+                        
+                        // 发送创建房间消息
+                        const create_room_message = {
+                            "type": "create_room",
+                            "player_name": player_name,
+                            "color": player_color
+                        };
+                        this.ws.send(JSON.stringify(create_room_message));
+                    };
+                    
+                    this.ws.onmessage = (e) => this.on_ws_message(e);
+                    this.ws.onclose = (e) => this.on_ws_close(e);
+                    this.ws.onerror = (e) => this.on_ws_error(e);
+                    
+                    document.getElementById("connectionStatus").textContent = "连接中...";
+                    
+                } catch (e) {
+                    document.getElementById("connectionStatus").textContent = `连接失败: ${e}`;
+                }
+            }
+            
+            // 显示加入房间输入框
+            show_join_room_input(event) {
+                // 显示房间ID输入框和确认按钮
+                document.getElementById("roomId").style.display = "block";
+                document.getElementById("confirmJoinRoom").style.display = "block";
+                
+                // 隐藏加入房间按钮
+                document.getElementById("joinRoom").style.display = "none";
+            }
+            
+            // 加入指定房间
+            join_specific_room(event) {
+                const room_id = document.getElementById("roomId").value;
+                
+                if (!room_id) {
+                    document.getElementById("gameStatus").textContent = "请输入房间ID";
+                    return;
+                }
+                
+                // 如果已经连接或已加入游戏，则不执行任何操作
+                if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+                    if (this.player_id) {
+                        document.getElementById("gameStatus").textContent = "您已经加入了游戏";
+                    } else {
+                        document.getElementById("gameStatus").textContent = "正在连接中，请稍候";
+                    }
+                    return;
+                }
+                
+                const player_name = document.getElementById("playerName").value;
+                const player_color = document.getElementById("playerColor").value;
+                
+                // 创建WebSocket连接
+                const ws_protocol = window.location.protocol === "https:" ? "wss" : "ws";
+                const ws_url = `${ws_protocol}://${window.location.host}/ws`;
+                
+                try {
+                    this.ws = new WebSocket(ws_url);
+                    
+                    this.ws.onopen = (e) => {
+                        document.getElementById("connectionStatus").textContent = "已连接";
+                        
+                        // 发送加入房间消息
+                        const join_room_message = {
+                            "type": "join_room",
+                            "room_id": room_id,
+                            "player_name": player_name,
+                            "color": player_color
+                        };
+                        this.ws.send(JSON.stringify(join_room_message));
+                    };
+                    
+                    this.ws.onmessage = (e) => this.on_ws_message(e);
+                    this.ws.onclose = (e) => this.on_ws_close(e);
+                    this.ws.onerror = (e) => this.on_ws_error(e);
+                    
+                    document.getElementById("connectionStatus").textContent = "连接中...";
+                    
+                } catch (e) {
+                    document.getElementById("connectionStatus").textContent = `连接失败: ${e}`;
+                }
+            }
+            
+            // 处理房间创建响应
+            handle_room_created(data) {
+                this.game_id = data.game_id;
+                this.player_id = data.player_id;
+                this.game_state = data.game_state;
+                this.pending_selected_tile = null; // 初始化待处理的选中位置
+                
+                document.getElementById("gameStatus").textContent = `房间创建成功 - 房间ID: ${data.room_id}`;
+                
+                // 禁用用户名输入框
+                document.getElementById("playerName").disabled = true;
+                
+                // 隐藏房间相关控件
+                document.getElementById("roomControls").style.display = "none";
+                document.getElementById("roomList").style.display = "none";
+                
+                // 显示准备按钮
+                document.getElementById("readyBtn").style.display = "inline-block";
+                
+                // 开始定期获取游戏状态
+                this.start_state_updates();
+            }
+            
+            // 处理房间加入响应
+            handle_room_joined(data) {
+                this.game_id = data.game_id;
+                this.player_id = data.player_id;
+                this.game_state = data.game_state;
+                this.pending_selected_tile = null; // 初始化待处理的选中位置
+                
+                document.getElementById("gameStatus").textContent = `房间加入成功 - 房间ID: ${data.room_id}`;
+                
+                // 禁用用户名输入框
+                document.getElementById("playerName").disabled = true;
+                
+                // 隐藏房间相关控件
+                document.getElementById("roomControls").style.display = "none";
+                document.getElementById("roomList").style.display = "none";
+                
+                // 显示准备按钮
+                document.getElementById("readyBtn").style.display = "inline-block";
+                
+                // 开始定期获取游戏状态
+                this.start_state_updates();
+            }
+            
+            // 处理房间列表响应
+            handle_rooms_list(data) {
+                const rooms = data.rooms;
+                const roomsList = document.getElementById("roomsList");
+                
+                // 清空房间列表
+                roomsList.innerHTML = "";
+                
+                if (rooms.length === 0) {
+                    roomsList.innerHTML = "<p>暂无可用房间</p>";
+                } else {
+                    // 创建房间列表
+                    const ul = document.createElement("ul");
+                    ul.style.listStyleType = "none";
+                    ul.style.padding = "0";
+                    
+                    rooms.forEach(room => {
+                        const li = document.createElement("li");
+                        li.style.marginBottom = "10px";
+                        li.style.padding = "10px";
+                        li.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                        li.style.borderRadius = "5px";
+                        
+                        const roomInfo = document.createElement("div");
+                        roomInfo.innerHTML = `
+                            <strong>房间ID: ${room.room_id}</strong><br>
+                            玩家数: ${room.player_count}/4<br>
+                            状态: ${room.game_started ? "游戏中" : "等待中"}
+                        `;
+                        
+                        const joinButton = document.createElement("button");
+                        joinButton.textContent = "加入";
+                        joinButton.style.marginTop = "5px";
+                        joinButton.addEventListener("click", () => {
+                            // 设置房间ID并加入
+                            document.getElementById("roomId").value = room.room_id;
+                            this.join_specific_room();
+                        });
+                        
+                        li.appendChild(roomInfo);
+                        if (!room.game_started && room.player_count < 4) {
+                            li.appendChild(joinButton);
+                        }
+                        
+                        ul.appendChild(li);
+                    });
+                    
+                    roomsList.appendChild(ul);
+                }
+                
+                // 显示房间列表
+                document.getElementById("roomList").style.display = "block";
             }
         }
         

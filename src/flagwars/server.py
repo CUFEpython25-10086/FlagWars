@@ -28,16 +28,109 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
             
             if message_type == 'join_game':
                 self._handle_join_game(data)
+            elif message_type == 'create_room':
+                self._handle_create_room(data)
+            elif message_type == 'join_room':
+                self._handle_join_room(data)
+            elif message_type == 'get_rooms':
+                self._handle_get_rooms()
             elif message_type == 'player_ready':
                 self._handle_player_ready()
             elif message_type == 'move_soldiers':
                 self._handle_move_soldiers(data)
             elif message_type == 'get_game_state':
                 self._handle_get_game_state()
+            elif message_type == 'play_again':
+                self._handle_play_again()
             
         except json.JSONDecodeError:
             logging.error("JSON解析错误")
             self.send_error("消息格式错误")
+    
+    def _handle_create_room(self, data):
+        """处理创建房间请求"""
+        player_name = data.get('player_name', '玩家')
+        player_color = data.get('color', '#FF0000')
+        
+        # 创建新房间
+        room_id = self.game_manager.create_room()
+        
+        # 加入房间
+        game_id, player_id, error = self.game_manager.join_room(room_id, player_name, player_color)
+        
+        if error:
+            response = {
+                'type': 'create_room_failed',
+                'message': error
+            }
+            self.write_message(json.dumps(response))
+            self.close()
+            return
+        
+        self.player_id = player_id
+        self.game_id = game_id
+        
+        # 将WebSocket处理器添加到玩家字典
+        self.game_manager.add_player_connection(game_id, player_id, self)
+        
+        # 发送房间创建成功信息
+        response = {
+            'type': 'room_created',
+            'room_id': room_id,
+            'game_id': game_id,
+            'player_id': player_id,
+            'game_state': self.game_manager.get_game_state(game_id)
+        }
+        self.write_message(json.dumps(response, default=str))
+    
+    def _handle_join_room(self, data):
+        """处理加入房间请求"""
+        room_id = data.get('room_id')
+        player_name = data.get('player_name', '玩家')
+        player_color = data.get('color', '#FF0000')
+        
+        if not room_id:
+            self.send_error("房间ID不能为空")
+            self.close()
+            return
+        
+        # 加入房间
+        game_id, player_id, error = self.game_manager.join_room(room_id, player_name, player_color)
+        
+        if error:
+            response = {
+                'type': 'join_room_failed',
+                'message': error
+            }
+            self.write_message(json.dumps(response))
+            self.close()
+            return
+        
+        self.player_id = player_id
+        self.game_id = game_id
+        
+        # 将WebSocket处理器添加到玩家字典
+        self.game_manager.add_player_connection(game_id, player_id, self)
+        
+        # 发送房间加入成功信息
+        response = {
+            'type': 'room_joined',
+            'room_id': room_id,
+            'game_id': game_id,
+            'player_id': player_id,
+            'game_state': self.game_manager.get_game_state(game_id)
+        }
+        self.write_message(json.dumps(response, default=str))
+    
+    def _handle_get_rooms(self):
+        """处理获取房间列表请求"""
+        rooms = self.game_manager.get_available_rooms()
+        
+        response = {
+            'type': 'rooms_list',
+            'rooms': rooms
+        }
+        self.write_message(json.dumps(response))
     
     def _handle_join_game(self, data):
         """处理加入游戏请求"""
@@ -126,6 +219,27 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
         }
         self.write_message(json.dumps(response, default=str))
     
+    def _handle_play_again(self):
+        """处理再来一局请求"""
+        if not self.game_id:
+            self.send_error("请先加入游戏")
+            return
+        
+        # 重置游戏状态
+        success = self.game_manager.reset_game(self.game_id)
+        
+        if success:
+            # 广播游戏重置消息给所有玩家
+            self.game_manager.broadcast_game_reset(self.game_id)
+            
+            response = {
+                'type': 'play_again_success',
+                'message': '游戏已重置，请准备开始新一局'
+            }
+            self.write_message(json.dumps(response))
+        else:
+            self.send_error("重置游戏失败")
+    
     def send_error(self, error_message):
         """发送错误消息"""
         response = {
@@ -149,6 +263,7 @@ class GameManager:
         self.players: Dict[str, Dict[int, GameWebSocketHandler]] = {}
         self.player_ready_states: Dict[str, Dict[int, bool]] = {}  # 玩家准备状态
         self.next_player_id = 1
+        self.next_room_id = 1000  # 房间ID从1000开始
         
         # 启动游戏更新循环
         self._start_game_loop()
@@ -162,25 +277,50 @@ class GameManager:
         
         ioloop.IOLoop.current().add_callback(game_loop)
     
-    def create_or_join_game(self, player_name: str, player_color: str) -> tuple:
-        """创建或加入游戏"""
-        # 简化：只创建一个游戏实例，id为"default_game"
-        game_id = "default_game"
+    def create_room(self) -> str:
+        """创建新房间并返回房间ID"""
+        room_id = str(self.next_room_id)
+        self.next_room_id += 1
         
-        # 如果游戏已存在且已开始，拒绝新玩家加入
-        if game_id in self.games and self.games[game_id].game_started:
-            return None, None  # 返回None表示拒绝加入
+        # 创建新游戏实例
+        game_state = GameState()
+        self.games[room_id] = game_state
+        self.players[room_id] = {}
+        self.player_ready_states[room_id] = {}
+        
+        return room_id
+    
+    def get_available_rooms(self) -> Dict[str, Dict]:
+        """获取所有可用房间信息"""
+        rooms = {}
+        for room_id, game_state in self.games.items():
+            # 只返回未开始的游戏房间
+            if not game_state.game_started:
+                rooms[room_id] = {
+                    'room_id': room_id,
+                    'player_count': len(game_state.players),
+                    'max_players': 4,  # 最大4个玩家
+                    'status': 'waiting' if not game_state.game_started else 'in_progress'
+                }
+        return rooms
+    
+    def join_room(self, room_id: str, player_name: str, player_color: str) -> tuple:
+        """加入指定房间"""
+        # 检查房间是否存在
+        if room_id not in self.games:
+            return None, None, "房间不存在"
+        
+        # 检查房间是否已开始
+        if self.games[room_id].game_started:
+            return None, None, "游戏已开始，无法加入"
+        
+        # 检查房间是否已满
+        if len(self.games[room_id].players) >= 4:
+            return None, None, "房间已满"
         
         # 设置玩家基地位置
         base_positions = [(2, 2), (17, 12), (2, 12), (17, 2)]
         
-        if game_id not in self.games:
-            # 创建新游戏
-            game_state = GameState()
-            self.games[game_id] = game_state
-            self.players[game_id] = {}
-            self.player_ready_states[game_id] = {}
-            
         # 创建玩家
         player_id = self.next_player_id
         self.next_player_id += 1
@@ -188,14 +328,24 @@ class GameManager:
         player = Player(player_id, player_name, player_color)
         
         # 分配基地位置
-        game_state = self.games[game_id]
-        base_index = len(self.players[game_id]) % 4
+        game_state = self.games[room_id]
+        base_index = len(self.players[room_id]) % 4
         base_x, base_y = base_positions[base_index]
         
         game_state.add_player(player, base_x, base_y)
-        self.player_ready_states[game_id][player_id] = False  # 初始未准备
+        self.player_ready_states[room_id][player_id] = False  # 初始未准备
         
-        return game_id, player_id
+        return room_id, player_id, None  # 第三个参数为错误信息，None表示成功
+    
+    def create_or_join_game(self, player_name: str, player_color: str, room_id: str = None) -> tuple:
+        """创建或加入游戏（保持向后兼容）"""
+        if room_id:
+            # 尝试加入指定房间
+            return self.join_room(room_id, player_name, player_color)
+        else:
+            # 创建新房间并加入
+            new_room_id = self.create_room()
+            return self.join_room(new_room_id, player_name, player_color)
 
     def add_player_connection(self, game_id: str, player_id: int, handler):
         """添加玩家连接"""
@@ -233,6 +383,20 @@ class GameManager:
         
         message = {
             'type': 'game_started',
+            'game_state': self.get_game_state(game_id)
+        }
+        
+        for player_id, handler in self.players[game_id].items():
+            if handler:
+                handler.write_message(json.dumps(message, default=str))
+    
+    def broadcast_game_reset(self, game_id: str):
+        """广播游戏重置消息给所有玩家"""
+        if game_id not in self.players:
+            return
+        
+        message = {
+            'type': 'game_reset',
             'game_state': self.get_game_state(game_id)
         }
         
@@ -321,6 +485,40 @@ class GameManager:
                 self.games[game_id].game_started and 
                 len(self.games[game_id].players) < 2):
                 self.games[game_id].game_over = True
+    
+    def reset_game(self, game_id: str) -> bool:
+        """重置游戏状态，保留玩家但重置游戏地图和状态"""
+        if game_id not in self.games:
+            return False
+        
+        # 保存当前玩家信息
+        current_players = list(self.games[game_id].players.values())
+        
+        # 创建新的游戏状态
+        new_game_state = GameState()
+        
+        # 重新添加玩家到新游戏状态
+        base_positions = [(2, 2), (17, 12), (2, 12), (17, 2)]
+        
+        for i, player in enumerate(current_players):
+            # 重置玩家状态
+            player.is_alive = True
+            
+            # 分配基地位置
+            base_index = i % 4
+            base_x, base_y = base_positions[base_index]
+            
+            # 添加玩家到新游戏状态
+            new_game_state.add_player(player, base_x, base_y)
+        
+        # 替换旧的游戏状态
+        self.games[game_id] = new_game_state
+        
+        # 重置所有玩家的准备状态为False
+        for player_id in self.player_ready_states[game_id]:
+            self.player_ready_states[game_id][player_id] = False
+        
+        return True
 
 
 class MainHandler(web.RequestHandler):
