@@ -1,6 +1,9 @@
 # FlagWars
 > 愿旗帜与你同在。
 
+[中文版README](README_ch.md) | [English README](README.md)
+
+
 ## 许可证
 本项目采用 [GNU GPLv3 许可证](LICENSE)。
 

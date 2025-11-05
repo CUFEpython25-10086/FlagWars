@@ -1,6 +1,9 @@
 # FlagWars
 > May the FLAG be with you.
 
+[中文版README](README_ch.md) | [English README](README.md)
+
+
 ## License
 This project is licensed under the [GNU GPLv3 License](LICENSE).
 
