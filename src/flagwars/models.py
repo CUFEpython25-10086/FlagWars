@@ -93,8 +93,8 @@ class GameState:
         """随机生成地形"""
         import random
         
-        # 生成一些塔楼
-        for _ in range(5):
+        # 生成一些塔楼 - 增加到8个
+        for _ in range(8):
             x = random.randint(2, self.map_width - 3)
             y = random.randint(2, self.map_height - 3)
             self.tiles[y][x].terrain_type = TerrainType.TOWER
@@ -111,8 +111,8 @@ class GameState:
             # 初始化中立地块的士兵数量
             self.tiles[y][x].soldiers = self.tiles[y][x].required_soldiers
         
-        # 生成一些山脉
-        for _ in range(8):
+        # 生成一些山脉 - 增加到12个
+        for _ in range(12):
             x = random.randint(1, self.map_width - 2)
             y = random.randint(1, self.map_height - 2)
             self.tiles[y][x].terrain_type = TerrainType.MOUNTAIN

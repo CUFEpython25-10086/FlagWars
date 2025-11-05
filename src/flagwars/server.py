@@ -494,11 +494,11 @@ class GameManager:
                 
                 # 如果指定了玩家ID且该地块对玩家不可见，则隐藏详细信息
                 if player_id and player_id in tile.visibility and not tile.visibility.get(player_id, False):
-                    # 对于不可见的地块，只显示基本地形信息，隐藏所有者和士兵数量
+                    # 对于不可见的地块，显示真实地形信息但隐藏所有者和士兵数量
                     tile_data = {
                         'x': tile.x,
                         'y': tile.y,
-                        'terrain_type': 'plain',  # 不可见区域显示为平原
+                        'terrain_type': tile.terrain_type.value,  # 显示真实地形类型
                         'owner_id': None,
                         'soldiers': 0,
                         'required_soldiers': 0,

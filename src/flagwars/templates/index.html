@@ -869,8 +869,16 @@
                 // 如果地块有所有者，使用玩家颜色作为主色调
                 let color;
                 if (is_fog) {
-                    // 战争迷雾中的地块显示为暗色
-                    color = "#1a1a1a";
+                    // 战争迷雾中的地块显示为暗色，但保留地形类型的区别
+                    const fog_terrain_colors = {
+                        "plain": "#1a2a1a",      // 平原 - 暗绿
+                        "base": "#1a2a1a",      // 基地 - 暗绿
+                        "tower": "#151515",     // 塔楼 - 更深的暗灰
+                        "wall": "#151515",      // 城墙 - 更深的暗灰
+                        "mountain": "#151515", // 山脉 - 更深的暗灰
+                        "swamp": "#0a2a1a"      // 沼泽 - 暗青
+                    };
+                    color = fog_terrain_colors[tile.terrain_type] || "#1a1a1a";
                 } else if (tile.owner_id) {
                     const player = this.game_state.players[tile.owner_id];
                     if (player) {
