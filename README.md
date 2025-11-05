@@ -39,3 +39,13 @@ Attack, defend, cooperate, and betray... use every opportunity to win!
 - **Client**: HTML5 Canvas + Brython (Python in Browser)
 - **Package Management**: uv (modern Python package manager)
 
+# Team Composition
+
+| 姓名 | GitHub 用户名 |职位|
+|------|--------------|----|
+| 游尹哲郡 | @LeoAndJellyfish |架构工程师、游戏逻辑工程师|
+| 李科翰 | @Sakura975 |前端工程师|
+| 杨帆 | @91-MrYang |测试工程师|
+| 马俊怡 | @Goodnight886 |文本工程师|
+| 陈发英 | @hello0422-1 ||
+| 李沛瑾 | @HaDock-Harriet |配色工程师|
