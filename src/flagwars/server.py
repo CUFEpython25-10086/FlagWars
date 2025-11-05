@@ -404,6 +404,23 @@ class GameManager:
             if handler:
                 handler.write_message(json.dumps(message, default=str))
     
+    def broadcast_player_left(self, game_id: str, player_id: int, player_name: str):
+        """广播玩家离开消息给其他玩家"""
+        if game_id not in self.players:
+            return
+        
+        message = {
+            'type': 'player_left',
+            'player_id': player_id,
+            'player_name': player_name,
+            'game_state': self.get_game_state(game_id)
+        }
+        
+        for pid, handler in self.players[game_id].items():
+            # 不向离开的玩家发送消息（因为连接已断开）
+            if handler and pid != player_id:
+                handler.write_message(json.dumps(message, default=str))
+    
     def move_soldiers(self, game_id: str, player_id: int, from_x: int, from_y: int, to_x: int, to_y: int) -> bool:
         """移动士兵"""
         if game_id not in self.games:
@@ -478,7 +495,11 @@ class GameManager:
             
             # 从游戏状态中删除玩家
             if game_id in self.games and player_id in self.games[game_id].players:
+                player_name = self.games[game_id].players[player_id].name
                 self.games[game_id].remove_player(player_id)
+                
+                # 广播玩家离开消息给其他玩家
+                self.broadcast_player_left(game_id, player_id, player_name)
             
             # 如果游戏已经开始且没有足够的玩家，结束游戏
             if (game_id in self.games and 

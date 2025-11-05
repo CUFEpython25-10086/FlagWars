@@ -120,6 +120,41 @@
             margin-top: 20px;
         }
         
+        .player-list {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .player-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+        
+        .player-name {
+            font-weight: bold;
+        }
+        
+        .player-status {
+            font-size: 0.9em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .player-status.ready {
+            background: rgba(76, 175, 80, 0.5);
+        }
+        
+        .player-status.not-ready {
+            background: rgba(244, 67, 54, 0.5);
+        }
         .legend-item {
             display: flex;
             align-items: center;
@@ -172,6 +207,11 @@
                 <div class="controls">
                     <h3>游戏控制</h3>
                     <div class="status" id="gameStatus">等待加入游戏...</div>
+                </div>
+                
+                <div class="player-list">
+                    <h3>房间内玩家</h3>
+                    <div id="playersList"></div>
                 </div>
                 
                 <div class="terrain-legend">
@@ -296,40 +336,51 @@
             }
             
             on_ws_message(event) {
-                try {
-                    const data = JSON.parse(event.data);
-                    const message_type = data.type;
-                    
-                    if (message_type === "game_joined") {
+                const data = JSON.parse(event.data);
+                
+                switch (data.type) {
+                    case 'game_joined':
                         this.handle_game_joined(data);
-                    } else if (message_type === "join_rejected") {
+                        break;
+                    case 'join_rejected':
                         this.handle_join_rejected(data);
-                    } else if (message_type === "join_room_failed") {
+                        break;
+                    case 'join_room_failed':
                         this.handle_join_room_failed(data);
-                    } else if (message_type === "game_state") {
+                        break;
+                    case 'game_state':
                         this.handle_game_state(data);
-                    } else if (message_type === "move_result") {
+                        break;
+                    case 'move_result':
                         this.handle_move_result(data);
-                    } else if (message_type === "error") {
+                        break;
+                    case 'error':
                         this.handle_error(data);
-                    } else if (message_type === "player_ready_updated") {
+                        break;
+                    case 'player_ready_updated':
                         this.handle_player_ready_updated(data);
-                    } else if (message_type === "game_started") {
-                    this.handle_game_started(data);
-                } else if (message_type === "game_reset") {
-                    this.handle_game_reset(data);
-                } else if (message_type === "play_again_success") {
-                    this.handle_play_again_success(data);
-                } else if (message_type === "room_created") {
+                        break;
+                    case 'game_started':
+                        this.handle_game_started(data);
+                        break;
+                    case 'game_reset':
+                        this.handle_game_reset(data);
+                        break;
+                    case 'play_again_success':
+                        this.handle_play_again_success(data);
+                        break;
+                    case 'room_created':
                         this.handle_room_created(data);
-                    } else if (message_type === "room_joined") {
+                        break;
+                    case 'room_joined':
                         this.handle_room_joined(data);
-                    } else if (message_type === "rooms_list") {
+                        break;
+                    case 'rooms_list':
                         this.handle_rooms_list(data);
-                    }
-                    
-                } catch (e) {
-                    console.log(`消息处理错误: ${e}`);
+                        break;
+                    case 'player_left':
+                        this.handle_player_left(data);
+                        break;
                 }
             }
             
@@ -444,6 +495,22 @@
                 };
                 
                 this.ws.send(JSON.stringify(ready_message));
+            }
+            
+            handle_player_left(data) {
+                // 处理玩家离开消息
+                console.log(`玩家 ${data.player_name} 已离开游戏`);
+                
+                // 更新游戏状态
+                this.gameState = data.game_state;
+                
+                // 更新玩家列表显示
+                this.render_players_list();
+                
+                // 如果游戏正在进行中，显示玩家离开消息
+                if (this.gameState.game_started) {
+                    this.showMessage(`玩家 ${data.player_name} 已离开游戏`, 'info');
+                }
             }
             
             handle_player_ready_updated(data) {
@@ -681,6 +748,57 @@
                 }));
             }
             
+            // 渲染玩家列表
+            render_players_list() {
+                if (!this.game_state || !this.game_state.players) {
+                    document.getElementById("playersList").innerHTML = "<p>暂无玩家</p>";
+                    return;
+                }
+                
+                const playersList = document.getElementById("playersList");
+                playersList.innerHTML = "";
+                
+                // 创建玩家列表
+                Object.values(this.game_state.players).forEach(player => {
+                    const playerDiv = document.createElement("div");
+                    playerDiv.className = "player-item";
+                    
+                    // 玩家名称和颜色标识
+                    const playerInfo = document.createElement("div");
+                    playerInfo.className = "player-name";
+                    
+                    // 添加颜色标识
+                    const colorIndicator = document.createElement("span");
+                    colorIndicator.style.display = "inline-block";
+                    colorIndicator.style.width = "12px";
+                    colorIndicator.style.height = "12px";
+                    colorIndicator.style.backgroundColor = player.color;
+                    colorIndicator.style.borderRadius = "50%";
+                    colorIndicator.style.marginRight = "8px";
+                    
+                    playerInfo.appendChild(colorIndicator);
+                    playerInfo.appendChild(document.createTextNode(player.name));
+                    
+                    // 玩家状态
+                    const playerStatus = document.createElement("div");
+                    playerStatus.className = "player-status";
+                    
+                    if (player.id === this.player_id) {
+                        playerStatus.textContent = "你";
+                    } else if (player.ready) {
+                        playerStatus.textContent = "已准备";
+                        playerStatus.classList.add("ready");
+                    } else {
+                        playerStatus.textContent = "未准备";
+                        playerStatus.classList.add("not-ready");
+                    }
+                    
+                    playerDiv.appendChild(playerInfo);
+                    playerDiv.appendChild(playerStatus);
+                    playersList.appendChild(playerDiv);
+                });
+            }
+            
             render() {
                 if (!this.game_state) {
                     this.render_waiting_screen();
@@ -703,6 +821,9 @@
                 
                 // 渲染游戏信息
                 this.render_game_info();
+                
+                // 渲染玩家列表
+                this.render_players_list();
             }
             
             render_tile(x, y) {
