@@ -158,10 +158,6 @@
                 
                 <div class="controls">
                     <h3>游戏控制</h3>
-                    <button id="moveUp" disabled>↑ 向上移动</button>
-                    <button id="moveDown" disabled>↓ 向下移动</button>
-                    <button id="moveLeft" disabled>← 向左移动</button>
-                    <button id="moveRight" disabled>→ 向右移动</button>
                     <div class="status" id="gameStatus">等待加入游戏...</div>
                 </div>
                 
@@ -223,12 +219,6 @@
                 
                 // 准备按钮
                 document.getElementById("readyBtn").addEventListener("click", (e) => this.toggle_ready(e));
-                
-                // 移动控制按钮
-                document.getElementById("moveUp").addEventListener("click", (e) => this.move_soldiers(0, -1));
-                document.getElementById("moveDown").addEventListener("click", (e) => this.move_soldiers(0, 1));
-                document.getElementById("moveLeft").addEventListener("click", (e) => this.move_soldiers(-1, 0));
-                document.getElementById("moveRight").addEventListener("click", (e) => this.move_soldiers(1, 0));
                 
                 // 画布点击事件
                 this.canvas.addEventListener("click", (e) => this.handle_canvas_click(e));
@@ -318,11 +308,6 @@
                 // 显示准备按钮
                 document.getElementById("readyBtn").style.display = "inline-block";
                 
-                // 禁用移动控制（等待游戏开始）
-                ["moveUp", "moveDown", "moveLeft", "moveRight"].forEach(btn_id => {
-                    document.getElementById(btn_id).disabled = true;
-                });
-                
                 // 开始定期获取游戏状态
                 this.start_state_updates();
             }
@@ -349,11 +334,6 @@
                 
                 // 禁用准备按钮
                 document.getElementById("readyBtn").style.display = "none";
-                
-                // 禁用移动控制
-                ["moveUp", "moveDown", "moveLeft", "moveRight"].forEach(btn_id => {
-                    document.getElementById(btn_id).disabled = true;
-                });
                 
                 // 重新渲染空画布
                 this.render();
@@ -415,11 +395,6 @@
                     readyBtn.textContent = "游戏已开始";
                     readyBtn.style.backgroundColor = "#95a5a6";
                     document.getElementById("gameStatus").textContent = "游戏开始！";
-                    
-                    // 启用移动控制
-                    ["moveUp", "moveDown", "moveLeft", "moveRight"].forEach(btn_id => {
-                        document.getElementById(btn_id).disabled = false;
-                    });
                 } else {
                     // 游戏未开始，允许切换准备状态
                     readyBtn.disabled = false;
@@ -452,11 +427,6 @@
                 this.game_state = data.game_state;
                 document.getElementById("gameStatus").textContent = "游戏开始！";
                 
-                // 启用移动控制
-                ["moveUp", "moveDown", "moveLeft", "moveRight"].forEach(btn_id => {
-                    document.getElementById(btn_id).disabled = false;
-                });
-                
                 // 禁用准备按钮
                 const readyBtn = document.getElementById("readyBtn");
                 readyBtn.disabled = true;
@@ -475,11 +445,6 @@
                 this.player_id = null;
                 this.game_state = null;
                 this.selected_tile = null;
-                
-                // 禁用移动控制
-                ["moveUp", "moveDown", "moveLeft", "moveRight"].forEach(btn_id => {
-                    document.getElementById(btn_id).disabled = true;
-                });
                 
                 // 隐藏准备按钮
                 document.getElementById("readyBtn").style.display = "none";
@@ -545,19 +510,6 @@
                 
                 // 尝试移动士兵到新位置
                 this.move_soldiers_to(new_x, new_y);
-            }
-            
-            move_soldiers(dx, dy) {
-                if (!this.selected_tile) {
-                    document.getElementById("gameStatus").textContent = "请先选择一个地块";
-                    return;
-                }
-                
-                const [from_x, from_y] = this.selected_tile;
-                const to_x = from_x + dx;
-                const to_y = from_y + dy;
-                
-                this.move_soldiers_to(to_x, to_y);
             }
             
             move_soldiers_to(to_x, to_y) {

@@ -164,7 +164,7 @@ class GameManager:
     
     def create_or_join_game(self, player_name: str, player_color: str) -> tuple:
         """创建或加入游戏"""
-        # 简化：只创建一个游戏
+        # 简化：只创建一个游戏实例，id为"default_game"
         game_id = "default_game"
         
         # 如果游戏已存在且已开始，拒绝新玩家加入

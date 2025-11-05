@@ -97,6 +97,8 @@ class GameState:
             y = random.randint(2, self.map_height - 3)
             self.tiles[y][x].terrain_type = TerrainType.TOWER
             self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
+            # 初始化中立地块的士兵数量
+            self.tiles[y][x].soldiers = self.tiles[y][x].required_soldiers
         
         # 生成一些城墙
         for _ in range(10):
@@ -104,6 +106,8 @@ class GameState:
             y = random.randint(1, self.map_height - 2)
             self.tiles[y][x].terrain_type = TerrainType.WALL
             self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
+            # 初始化中立地块的士兵数量
+            self.tiles[y][x].soldiers = self.tiles[y][x].required_soldiers
         
         # 生成一些山脉
         for _ in range(8):
@@ -111,6 +115,7 @@ class GameState:
             y = random.randint(1, self.map_height - 2)
             self.tiles[y][x].terrain_type = TerrainType.MOUNTAIN
             self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
+            # 山脉不可占领，不需要士兵
         
         # 生成一些沼泽
         for _ in range(6):
@@ -118,6 +123,7 @@ class GameState:
             y = random.randint(1, self.map_height - 2)
             self.tiles[y][x].terrain_type = TerrainType.SWAMP
             self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
+            # 沼泽无需士兵即可占领，不需要初始化士兵数量
     
     def add_player(self, player: Player, base_x: int, base_y: int):
         """添加玩家并设置基地"""
@@ -210,8 +216,8 @@ class GameState:
         if to_tile.owner is None or to_tile.owner.id != player_id:
             # 敌方或中立地块
             if to_tile.owner is None:
-                # 未占领地块，视为已有required_soldiers个中立士兵
-                effective_soldiers = to_tile.required_soldiers
+                # 未占领地块，直接使用地块上实际存在的士兵数量
+                effective_soldiers = to_tile.soldiers
                 
                 # 如果required_soldiers为0，直接占领
                 if effective_soldiers == 0:
@@ -235,6 +241,7 @@ class GameState:
                     to_tile.soldiers = 0
                 else:
                     # 攻击方士兵数量小于防守方，防守方获胜
+                    # 保存剩余的中立士兵数量，而不是重置为required_soldiers
                     to_tile.owner = None
                     to_tile.soldiers = effective_soldiers - movable_soldiers
             else:
