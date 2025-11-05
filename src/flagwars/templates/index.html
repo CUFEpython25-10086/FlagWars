@@ -238,6 +238,16 @@
             }
             
             join_game(event) {
+                // 如果已经连接或已加入游戏，则不执行任何操作
+                if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+                    if (this.player_id) {
+                        document.getElementById("gameStatus").textContent = "您已经加入了游戏";
+                    } else {
+                        document.getElementById("gameStatus").textContent = "正在连接中，请稍候";
+                    }
+                    return;
+                }
+                
                 const player_name = document.getElementById("playerName").value;
                 const player_color = document.getElementById("playerColor").value;
                 
@@ -328,8 +338,25 @@
                     this.ws = null;
                 }
                 
+                // 重置游戏状态
+                this.game_id = null;
+                this.player_id = null;
+                this.game_state = null;
+                this.selected_tile = null;
+                
+                // 停止定期获取游戏状态
+                this.stop_state_updates();
+                
                 // 禁用准备按钮
                 document.getElementById("readyBtn").style.display = "none";
+                
+                // 禁用移动控制
+                ["moveUp", "moveDown", "moveLeft", "moveRight"].forEach(btn_id => {
+                    document.getElementById(btn_id).disabled = true;
+                });
+                
+                // 重新渲染空画布
+                this.render();
             }
             
             handle_game_state(data) {
@@ -361,6 +388,12 @@
                     return;
                 }
                 
+                // 检查游戏是否已开始
+                if (this.game_state && this.game_state.game_started) {
+                    document.getElementById("gameStatus").textContent = "游戏已开始，无法更改准备状态";
+                    return;
+                }
+                
                 const ready_message = {
                     "type": "player_ready"
                 };
@@ -376,19 +409,11 @@
                 const readyBtn = document.getElementById("readyBtn");
                 const player_ready = this.game_state.players[this.player_id]?.ready || false;
                 
-                if (player_ready) {
-                    readyBtn.textContent = "取消准备";
-                    readyBtn.style.backgroundColor = "#6bff6b";
-                } else {
-                    readyBtn.textContent = "准备";
-                    readyBtn.style.backgroundColor = "#ff6b6b";
-                }
-                
-                // 更新游戏状态显示
-                const ready_players = Object.values(this.game_state.players).filter(p => p.ready).length;
-                const total_players = Object.keys(this.game_state.players).length;
-                
                 if (game_started) {
+                    // 游戏已开始，禁用准备按钮
+                    readyBtn.disabled = true;
+                    readyBtn.textContent = "游戏已开始";
+                    readyBtn.style.backgroundColor = "#95a5a6";
                     document.getElementById("gameStatus").textContent = "游戏开始！";
                     
                     // 启用移动控制
@@ -396,6 +421,21 @@
                         document.getElementById(btn_id).disabled = false;
                     });
                 } else {
+                    // 游戏未开始，允许切换准备状态
+                    readyBtn.disabled = false;
+                    
+                    if (player_ready) {
+                        readyBtn.textContent = "取消准备";
+                        readyBtn.style.backgroundColor = "#6bff6b";
+                    } else {
+                        readyBtn.textContent = "准备";
+                        readyBtn.style.backgroundColor = "#ff6b6b";
+                    }
+                    
+                    // 更新游戏状态显示
+                    const ready_players = Object.values(this.game_state.players).filter(p => p.ready).length;
+                    const total_players = Object.keys(this.game_state.players).length;
+                    
                     if (total_players < 2) {
                         document.getElementById("gameStatus").textContent = 
                             `等待其他玩家加入 (${total_players}/2)`;
@@ -417,6 +457,12 @@
                     document.getElementById(btn_id).disabled = false;
                 });
                 
+                // 禁用准备按钮
+                const readyBtn = document.getElementById("readyBtn");
+                readyBtn.disabled = true;
+                readyBtn.textContent = "游戏已开始";
+                readyBtn.style.backgroundColor = "#95a5a6";
+                
                 this.render();
             }
             
@@ -424,13 +470,25 @@
                 document.getElementById("connectionStatus").textContent = "连接已关闭";
                 document.getElementById("gameStatus").textContent = "游戏连接断开";
                 
+                // 重置游戏状态
+                this.game_id = null;
+                this.player_id = null;
+                this.game_state = null;
+                this.selected_tile = null;
+                
                 // 禁用移动控制
                 ["moveUp", "moveDown", "moveLeft", "moveRight"].forEach(btn_id => {
                     document.getElementById(btn_id).disabled = true;
                 });
                 
+                // 隐藏准备按钮
+                document.getElementById("readyBtn").style.display = "none";
+                
                 // 停止定期获取游戏状态
                 this.stop_state_updates();
+                
+                // 重新渲染空画布
+                this.render();
             }
             
             on_ws_error(event) {
