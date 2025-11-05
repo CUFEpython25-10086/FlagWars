@@ -1,20 +1,20 @@
 @echo off
 echo ====================================
-echo FlagWars å±€åŸŸç½‘æ¸¸æˆå¿«é€Ÿè¿žæŽ¥
+echo FlagWars ¾ÖÓòÍøÓÎÏ·¿ìËÙÁ¬½Ó
 echo ====================================
 echo.
 
-set /p server_ip=è¯·è¾“å…¥æ¸¸æˆæœåŠ¡å™¨IPåœ°å€: 
+set /p server_ip=ÇëÊäÈëÓÎÏ··þÎñÆ÷IPµØÖ·: 
 
 if "%server_ip%"=="" (
-    echo é”™è¯¯: IPåœ°å€ä¸èƒ½ä¸ºç©º
+    echo ´íÎó: IPµØÖ·²»ÄÜÎª¿Õ
     pause
     exit /b 1
 )
 
 echo.
-echo æ­£åœ¨å°è¯•è¿žæŽ¥åˆ°æ¸¸æˆæœåŠ¡å™¨...
-echo å¦‚æžœè¿žæŽ¥æˆåŠŸï¼Œæµè§ˆå™¨å°†è‡ªåŠ¨æ‰“å¼€æ¸¸æˆé¡µé¢
+echo ÕýÔÚ³¢ÊÔÁ¬½Óµ½ÓÎÏ··þÎñÆ÷...
+echo Èç¹ûÁ¬½Ó³É¹¦£¬ä¯ÀÀÆ÷½«×Ô¶¯´ò¿ªÓÎÏ·Ò³Ãæ
 echo.
 
 timeout /t 2 /nobreak >nul
@@ -22,11 +22,11 @@ timeout /t 2 /nobreak >nul
 start http://%server_ip%:8888
 
 echo.
-echo æµè§ˆå™¨å·²æ‰“å¼€ï¼Œå¦‚æžœæ¸¸æˆé¡µé¢æœªæ­£ç¡®åŠ è½½ï¼Œè¯·æ£€æŸ¥ï¼š
-echo 1. æœåŠ¡å™¨IPåœ°å€æ˜¯å¦æ­£ç¡®
-echo 2. æ¸¸æˆæœåŠ¡å™¨æ˜¯å¦æ­£åœ¨è¿è¡Œ
-echo 3. é˜²ç«å¢™è®¾ç½®æ˜¯å¦æ­£ç¡®
-echo 4. ç½‘ç»œè¿žæŽ¥æ˜¯å¦æ­£å¸¸
+echo ä¯ÀÀÆ÷ÒÑ´ò¿ª£¬Èç¹ûÓÎÏ·Ò³ÃæÎ´ÕýÈ·¼ÓÔØ£¬Çë¼ì²é£º
+echo 1. ·þÎñÆ÷IPµØÖ·ÊÇ·ñÕýÈ·
+echo 2. ÓÎÏ··þÎñÆ÷ÊÇ·ñÕýÔÚÔËÐÐ
+echo 3. ·À»ðÇ½ÉèÖÃÊÇ·ñÕýÈ·
+echo 4. ÍøÂçÁ¬½ÓÊÇ·ñÕý³£
 echo.
 
 pause
