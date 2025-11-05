@@ -1,5 +1,7 @@
 # FlagWars 部署指南
 
+[toc]
+
 ## 概述
 
 FlagWars是一款现代化的夺旗游戏，采用Python后端(Tornado + WebSocket)和HTML5前端技术。本指南将帮助您在不同环境中部署FlagWars游戏服务器。
@@ -226,6 +228,156 @@ FlagWars是一款现代化的夺旗游戏，采用Python后端(Tornado + WebSock
    uv sync
    uv run python run_server.py
    ```
+
+### 方式四：使用1panel部署
+
+1panel是一款现代化的Linux服务器运维面板，支持一键部署应用。以下是使用1panel部署FlagWars的步骤：
+
+#### 安装1panel
+
+1. **安装1panel**
+   ```bash
+   # 使用官方安装脚本
+   curl -sSL https://resource.fit2cloud.com/1panel/package/quick_start.sh -o quick_start.sh && sh quick_start.sh
+   ```
+
+2. **登录1panel**
+   - 安装完成后，记录显示的访问地址、用户名和密码
+   - 通过浏览器访问1panel管理界面
+
+#### 部署FlagWars
+
+1. **创建应用环境**
+   - 登录1panel后，进入"容器" > "应用商店"
+   - 搜索并安装"Python环境"应用
+   - 选择Python 3.9或更高版本
+
+2. **创建Docker应用**
+   - 进入"容器" > "应用" > "创建应用"
+   - 选择"Docker Compose"方式
+   - 填写以下配置：
+
+   ```yaml
+   version: '3'
+   services:
+     flagwars:
+       image: python:3.9-slim
+       container_name: flagwars-server
+       restart: unless-stopped
+       ports:
+         - "8888:8888"
+       volumes:
+         - ./FlagWars:/app
+       working_dir: /app
+       command: ["sh", "-c", "pip install uv && uv sync && uv run python run_server.py"]
+   ```
+
+3. **或者使用自定义Dockerfile**
+   - 在服务器上创建项目目录
+   ```bash
+   mkdir -p /opt/1panel/apps/flagwars
+   cd /opt/1panel/apps/flagwars
+   ```
+
+   - 创建Dockerfile
+   ```dockerfile
+   FROM python:3.9-slim
+
+   WORKDIR /app
+
+   # 安装必要工具
+   RUN apt-get update && apt-get install -y \
+       curl \
+       && rm -rf /var/lib/apt/lists/*
+
+   # 安装 uv
+   RUN pip install uv
+
+   # 复制项目文件
+   COPY . .
+
+   # 安装依赖
+   RUN uv sync
+
+   # 暴露端口
+   EXPOSE 8888
+
+   # 启动命令
+   CMD ["uv", "run", "python", "run_server.py"]
+   ```
+
+   - 创建docker-compose.yml
+   ```yaml
+   version: '3'
+   services:
+     flagwars:
+       build: .
+       container_name: flagwars-server
+       restart: unless-stopped
+       ports:
+         - "8888:8888"
+       volumes:
+         - .:/app
+   ```
+
+4. **部署应用**
+   - 在1panel中进入"容器" > "应用"
+   - 点击"创建应用"，选择"从Docker Compose文件创建"
+   - 上传或粘贴docker-compose.yml内容
+   - 设置应用名称为"flagwars"
+   - 点击"创建"完成部署
+
+#### 配置反向代理
+
+1. **创建网站**
+   - 进入"网站" > "创建网站"
+   - 选择"反向代理"
+   - 填写域名（可选）
+   - 代理地址填写：http://127.0.0.1:8888
+   - 开启WebSocket支持
+
+2. **SSL证书配置**
+   - 在网站设置中选择"SSL"
+   - 可以使用Let's Encrypt免费证书
+   - 或上传已有证书
+
+#### 监控与日志
+
+1. **查看日志**
+   - 在应用详情页可以查看容器日志
+   - 或进入"容器" > "容器"查看flagwars-server容器日志
+
+2. **监控状态**
+   - 在1panel仪表板可以查看服务器资源使用情况
+   - 设置告警规则，当服务异常时接收通知
+
+#### 备份与恢复
+
+1. **数据备份**
+   - 进入"计划任务" > "创建任务"
+   - 选择"备份网站"或"备份目录"
+   - 设置备份路径为/opt/1panel/apps/flagwars
+   - 配置定期备份计划
+
+2. **应用恢复**
+   - 如需恢复，进入"备份"页面
+   - 选择相应备份文件进行恢复
+
+#### 高级配置
+
+1. **环境变量配置**
+   - 在应用设置中可以添加环境变量
+   - 例如设置日志级别、游戏配置等
+
+2. **资源限制**
+   - 在容器设置中可以限制CPU和内存使用
+   - 确保服务器资源合理分配
+
+3. **自动更新**
+   - 可以设置Git仓库自动拉取
+   - 配置Webhook实现代码更新后自动部署
+
+通过1panel部署FlagWars，您可以享受图形化管理、一键备份、SSL证书自动续期等便利功能，大大简化了运维工作。
 
 ## 配置选项
 

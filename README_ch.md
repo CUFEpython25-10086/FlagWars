@@ -1,7 +1,7 @@
 # FlagWars
 > 愿旗帜与你同在。
 
-[中文版README](README_ch.md) | [English README](README.md)
+[中文版](README_ch.md) | [English](README.md)
 
 
 ## 许可证

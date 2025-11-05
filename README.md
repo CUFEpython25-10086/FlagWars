@@ -1,7 +1,7 @@
 # FlagWars
 > May the FLAG be with you.
 
-[中文版README](README_ch.md) | [English README](README.md)
+[中文版](README_ch.md) | [English](README.md)
 
 
 ## License
