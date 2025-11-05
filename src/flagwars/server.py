@@ -46,6 +46,16 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
         
         # 创建或加入游戏
         game_id, player_id = self.game_manager.create_or_join_game(player_name, player_color)
+        
+        # 如果返回None，表示游戏已开始，拒绝加入
+        if game_id is None and player_id is None:
+            response = {
+                'type': 'join_rejected',
+                'message': '游戏已开始，无法加入'
+            }
+            self.write_message(json.dumps(response))
+            return
+        
         self.player_id = player_id
         self.game_id = game_id
         
@@ -156,6 +166,10 @@ class GameManager:
         """创建或加入游戏"""
         # 简化：只创建一个游戏
         game_id = "default_game"
+        
+        # 如果游戏已存在且已开始，拒绝新玩家加入
+        if game_id in self.games and self.games[game_id].game_started:
+            return None, None  # 返回None表示拒绝加入
         
         # 设置玩家基地位置
         base_positions = [(2, 2), (17, 12), (2, 12), (17, 2)]

@@ -279,6 +279,8 @@
                     
                     if (message_type === "game_joined") {
                         this.handle_game_joined(data);
+                    } else if (message_type === "join_rejected") {
+                        this.handle_join_rejected(data);
                     } else if (message_type === "game_state") {
                         this.handle_game_state(data);
                     } else if (message_type === "move_result") {
@@ -313,6 +315,21 @@
                 
                 // 开始定期获取游戏状态
                 this.start_state_updates();
+            }
+            
+            handle_join_rejected(data) {
+                const message = data.message;
+                document.getElementById("gameStatus").textContent = message;
+                document.getElementById("connectionStatus").textContent = "未连接";
+                
+                // 关闭WebSocket连接
+                if (this.ws) {
+                    this.ws.close();
+                    this.ws = null;
+                }
+                
+                // 禁用准备按钮
+                document.getElementById("readyBtn").style.display = "none";
             }
             
             handle_game_state(data) {
