@@ -127,6 +127,70 @@ class GameState:
             self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
             # 沼泽无需士兵即可占领，不需要初始化士兵数量
     
+    def generate_random_spawn_points(self, num_players: int) -> List[Tuple[int, int]]:
+        """生成随机的玩家出生点"""
+        import random
+        import math
+        
+        spawn_points = []
+        
+        # 地图边界，确保出生点不会太靠近边缘
+        min_distance_from_edge = 2
+        min_distance_between_spawns = max(
+            min(self.map_width, self.map_height) // 3,  # 至少是地图最小尺寸的1/3
+            5  # 最小距离为5格
+        )
+        
+        # 尝试生成指定数量的出生点
+        attempts = 0
+        max_attempts = 1000  # 最大尝试次数，防止无限循环
+        
+        while len(spawn_points) < num_players and attempts < max_attempts:
+            attempts += 1
+            
+            # 生成随机坐标，确保不靠近边缘
+            x = random.randint(min_distance_from_edge, self.map_width - 1 - min_distance_from_edge)
+            y = random.randint(min_distance_from_edge, self.map_height - 1 - min_distance_from_edge)
+            
+            # 检查该位置是否适合作为出生点
+            if self._is_valid_spawn_point(x, y, spawn_points, min_distance_between_spawns):
+                spawn_points.append((x, y))
+        
+        # 随机打乱出生点顺序，确保公平性
+        random.shuffle(spawn_points)
+        
+        return spawn_points
+    
+    def _is_valid_spawn_point(self, x: int, y: int, existing_points: List[Tuple[int, int]], min_distance: int) -> bool:
+        """检查指定位置是否适合作为出生点"""
+        # 检查地形是否适合（不能是山脉）
+        if self.tiles[y][x].terrain_type == TerrainType.MOUNTAIN:
+            return False
+        
+        # 检查与现有出生点的距离
+        for px, py in existing_points:
+            # 使用曼哈顿距离
+            distance = abs(x - px) + abs(y - py)
+            if distance < min_distance:
+                return False
+        
+        # 检查周围是否有太多障碍物
+        obstacle_count = 0
+        check_radius = 2  # 检查周围2格的范围
+        
+        for dy in range(-check_radius, check_radius + 1):
+            for dx in range(-check_radius, check_radius + 1):
+                nx, ny = x + dx, y + dy
+                if (0 <= nx < self.map_width and 0 <= ny < self.map_height and
+                    self.tiles[ny][nx].terrain_type == TerrainType.MOUNTAIN):
+                    obstacle_count += 1
+        
+        # 如果周围障碍物太多，则不适合作为出生点
+        if obstacle_count > check_radius:  # 允许一些障碍物，但不能太多
+            return False
+        
+        return True
+    
     def add_player(self, player: Player, base_x: int, base_y: int):
         """添加玩家并设置基地"""
         self.players[player.id] = player

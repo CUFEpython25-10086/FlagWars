@@ -319,19 +319,31 @@ class GameManager:
         if len(self.games[room_id].players) >= 4:
             return None, None, "房间已满"
         
-        # 设置玩家基地位置
-        base_positions = [(2, 2), (17, 12), (2, 12), (17, 2)]
-        
         # 创建玩家
         player_id = self.next_player_id
         self.next_player_id += 1
         
         player = Player(player_id, player_name, player_color)
         
-        # 分配基地位置
+        # 获取游戏状态
         game_state = self.games[room_id]
-        base_index = len(self.players[room_id]) % 4
-        base_x, base_y = base_positions[base_index]
+        
+        # 如果是第一个玩家，暂不生成出生点，等待所有玩家加入
+        if len(self.players[room_id]) == 0:
+            # 初始化出生点列表为空
+            game_state.spawn_points = []
+        
+        # 分配基地位置
+        player_index = len(self.players[room_id])
+        
+        # 如果还没有生成出生点，或者当前玩家数量超过了已生成的出生点数量
+        if not hasattr(game_state, 'spawn_points') or player_index >= len(game_state.spawn_points):
+            # 根据当前玩家数量+1生成新的出生点
+            new_player_count = len(self.players[room_id]) + 1
+            game_state.spawn_points = game_state.generate_random_spawn_points(new_player_count)
+        
+        # 分配出生点
+        base_x, base_y = game_state.spawn_points[player_index]
         
         game_state.add_player(player, base_x, base_y)
         self.player_ready_states[room_id][player_id] = False  # 初始未准备
@@ -575,16 +587,17 @@ class GameManager:
         # 创建新的游戏状态
         new_game_state = GameState()
         
-        # 重新添加玩家到新游戏状态
-        base_positions = [(2, 2), (17, 12), (2, 12), (17, 2)]
+        # 根据实际玩家数量生成随机出生点
+        player_count = len(current_players)
+        new_game_state.spawn_points = new_game_state.generate_random_spawn_points(player_count)
         
+        # 重新添加玩家到新游戏状态
         for i, player in enumerate(current_players):
             # 重置玩家状态
             player.is_alive = True
             
             # 分配基地位置
-            base_index = i % 4
-            base_x, base_y = base_positions[base_index]
+            base_x, base_y = new_game_state.spawn_points[i]
             
             # 添加玩家到新游戏状态
             new_game_state.add_player(player, base_x, base_y)
