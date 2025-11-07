@@ -185,7 +185,6 @@
                 <div class="player-setup">
                     <h3>玩家设置</h3>
                     <input type="text" id="playerName" placeholder="输入玩家名称" value="玩家1">
-                    <input type="color" id="playerColor" value="#FF0000">
                     
                     <div id="roomControls">
                         <button id="createRoom">创建房间</button>
@@ -259,7 +258,6 @@
                 this.game_id = null;
                 this.selected_tile = null;
                 this.pending_selected_tile = null; // 初始化待处理的选中位置
-                this.state_update_interval = null;
                 
                 this.canvas = document.getElementById("gameCanvas");
                 this.ctx = this.canvas.getContext("2d");
@@ -307,7 +305,6 @@
                 }
                 
                 const player_name = document.getElementById("playerName").value;
-                const player_color = document.getElementById("playerColor").value;
                 
                 // 创建WebSocket连接
                 const ws_protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -316,7 +313,7 @@
                 try {
                     this.ws = new WebSocket(ws_url);
                     
-                    this.ws.onopen = (e) => this.on_ws_open(player_name, player_color);
+                    this.ws.onopen = (e) => this.on_ws_open(player_name);
                     this.ws.onmessage = (e) => this.on_ws_message(e);
                     this.ws.onclose = (e) => this.on_ws_close(e);
                     this.ws.onerror = (e) => this.on_ws_error(e);
@@ -328,14 +325,13 @@
                 }
             }
             
-            on_ws_open(player_name, player_color) {
+            on_ws_open(player_name) {
                 document.getElementById("connectionStatus").textContent = "已连接";
                 
-                // 发送加入游戏消息
+                // 发送加入游戏消息，不包含颜色参数，由服务器分配
                 const join_message = {
                     "type": "join_game",
-                    "player_name": player_name,
-                    "color": player_color
+                    "player_name": player_name
                 };
                 this.ws.send(JSON.stringify(join_message));
             }
@@ -523,7 +519,7 @@
                 
                 // 如果游戏正在进行中，显示玩家离开消息
                 if (this.gameState.game_started) {
-                    this.showMessage(`玩家 ${data.player_name} 已离开游戏`, 'info');
+                    document.getElementById("gameStatus").textContent = `玩家 ${data.player_name} 已离开游戏`;
                 }
             }
             
@@ -1088,7 +1084,6 @@
                 }
                 
                 const player_name = document.getElementById("playerName").value;
-                const player_color = document.getElementById("playerColor").value;
                 
                 // 创建WebSocket连接
                 const ws_protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -1100,11 +1095,10 @@
                     this.ws.onopen = (e) => {
                         document.getElementById("connectionStatus").textContent = "已连接";
                         
-                        // 发送创建房间消息
+                        // 发送创建房间消息，不包含颜色参数，由服务器分配
                         const create_room_message = {
                             "type": "create_room",
-                            "player_name": player_name,
-                            "color": player_color
+                            "player_name": player_name
                         };
                         this.ws.send(JSON.stringify(create_room_message));
                     };
@@ -1150,7 +1144,6 @@
                 }
                 
                 const player_name = document.getElementById("playerName").value;
-                const player_color = document.getElementById("playerColor").value;
                 
                 // 创建WebSocket连接
                 const ws_protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -1162,12 +1155,11 @@
                     this.ws.onopen = (e) => {
                         document.getElementById("connectionStatus").textContent = "已连接";
                         
-                        // 发送加入房间消息
+                        // 发送加入房间消息，不包含颜色参数，由服务器分配
                         const join_room_message = {
                             "type": "join_room",
                             "room_id": room_id,
-                            "player_name": player_name,
-                            "color": player_color
+                            "player_name": player_name
                         };
                         this.ws.send(JSON.stringify(join_room_message));
                     };
@@ -1263,7 +1255,7 @@
                         const roomInfo = document.createElement("div");
                         roomInfo.innerHTML = `
                             <strong>房间ID: ${room.room_id}</strong><br>
-                            玩家数: ${room.player_count}/4<br>
+                            玩家数: ${room.player_count}/8<br>
                             状态: ${room.game_started ? "游戏中" : "等待中"}
                         `;
                         
@@ -1277,7 +1269,7 @@
                         });
                         
                         li.appendChild(roomInfo);
-                        if (!room.game_started && room.player_count < 4) {
+                        if (!room.game_started && room.player_count < 8) {
                             li.appendChild(joinButton);
                         }
                         

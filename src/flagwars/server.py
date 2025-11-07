@@ -50,13 +50,12 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
     def _handle_create_room(self, data):
         """处理创建房间请求"""
         player_name = data.get('player_name', '玩家')
-        player_color = data.get('color', '#FF0000')
         
         # 创建新房间
         room_id = self.game_manager.create_room()
         
         # 加入房间
-        game_id, player_id, error = self.game_manager.join_room(room_id, player_name, player_color)
+        game_id, player_id, error = self.game_manager.join_room(room_id, player_name)
         
         if error:
             response = {
@@ -87,7 +86,6 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
         """处理加入房间请求"""
         room_id = data.get('room_id')
         player_name = data.get('player_name', '玩家')
-        player_color = data.get('color', '#FF0000')
         
         if not room_id:
             self.send_error("房间ID不能为空")
@@ -95,7 +93,7 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
             return
         
         # 加入房间
-        game_id, player_id, error = self.game_manager.join_room(room_id, player_name, player_color)
+        game_id, player_id, error = self.game_manager.join_room(room_id, player_name)
         
         if error:
             response = {
@@ -135,10 +133,9 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
     def _handle_join_game(self, data):
         """处理加入游戏请求"""
         player_name = data.get('player_name', '玩家')
-        player_color = data.get('color', '#FF0000')
         
         # 创建或加入游戏
-        game_id, player_id = self.game_manager.create_or_join_game(player_name, player_color)
+        game_id, player_id = self.game_manager.create_or_join_game(player_name)
         
         # 如果返回None，表示游戏已开始，拒绝加入
         if game_id is None and player_id is None:
@@ -267,6 +264,18 @@ class GameManager:
         self.next_player_id = 1
         self.next_room_id = 1000  # 房间ID从1000开始
         
+        # 预定义的8种玩家颜色
+        self.player_colors = [
+            "#FF0000",  # 红色
+            "#0000FF",  # 蓝色
+            "#00FF00",  # 绿色
+            "#FFFF00",  # 黄色
+            "#FF00FF",  # 紫色
+            "#00FFFF",  # 青色
+            "#FFA500",  # 橙色
+            "#800080"   # 深紫色
+        ]
+        
         # 启动游戏更新循环
         self._start_game_loop()
     
@@ -301,12 +310,12 @@ class GameManager:
                 rooms[room_id] = {
                     'room_id': room_id,
                     'player_count': len(game_state.players),
-                    'max_players': 4,  # 最大4个玩家
+                    'max_players': 8,  # 最大8个玩家
                     'status': 'waiting' if not game_state.game_started else 'in_progress'
                 }
         return rooms
     
-    def join_room(self, room_id: str, player_name: str, player_color: str) -> tuple:
+    def join_room(self, room_id: str, player_name: str) -> tuple:
         """加入指定房间"""
         # 检查房间是否存在
         if room_id not in self.games:
@@ -317,12 +326,17 @@ class GameManager:
             return None, None, "游戏已开始，无法加入"
         
         # 检查房间是否已满
-        if len(self.games[room_id].players) >= 4:
+        if len(self.games[room_id].players) >= 8:
             return None, None, "房间已满"
         
         # 创建玩家
         player_id = self.next_player_id
         self.next_player_id += 1
+        
+        # 按加入顺序分配颜色
+        player_index = len(self.players[room_id])
+        predefined_colors = ["#FF0000", "#00FF00", "#0000FF", "#DAA520", "#FF00FF", "#00FFFF", "#FFA500", "#800080"]
+        player_color = predefined_colors[player_index % len(predefined_colors)]
         
         player = Player(player_id, player_name, player_color)
         
@@ -351,15 +365,15 @@ class GameManager:
         
         return room_id, player_id, None  # 第三个参数为错误信息，None表示成功
     
-    def create_or_join_game(self, player_name: str, player_color: str, room_id: str = None) -> tuple:
+    def create_or_join_game(self, player_name: str, room_id: str = None) -> tuple:
         """创建或加入游戏（保持向后兼容）"""
         if room_id:
             # 尝试加入指定房间
-            return self.join_room(room_id, player_name, player_color)
+            return self.join_room(room_id, player_name)
         else:
             # 创建新房间并加入
             new_room_id = self.create_room()
-            return self.join_room(new_room_id, player_name, player_color)
+            return self.join_room(new_room_id, player_name)
 
     def add_player_connection(self, game_id: str, player_id: int, handler):
         """添加玩家连接"""
@@ -552,6 +566,21 @@ class GameManager:
             if game_state.game_started and not game_state.game_over:
                 game_state.update_game_tick()
     
+    def close_room(self, room_id: str):
+        """关闭房间并清理相关资源"""
+        if room_id in self.games:
+            del self.games[room_id]
+            logging.info(f"房间 {room_id} 已关闭")
+        
+        if room_id in self.players:
+            del self.players[room_id]
+        
+        if room_id in self.connections:
+            del self.connections[room_id]
+        
+        if room_id in self.player_ready_states:
+            del self.player_ready_states[room_id]
+
     def leave_game(self, game_id: str, player_id: int):
         """玩家离开游戏"""
         if game_id in self.games and game_id in self.players:
@@ -576,6 +605,10 @@ class GameManager:
                 self.games[game_id].game_started and 
                 len(self.games[game_id].players) < 2):
                 self.games[game_id].game_over = True
+            
+            # 如果房间中没有玩家了，关闭房间
+            if game_id in self.games and len(self.games[game_id].players) == 0:
+                self.close_room(game_id)
     
     def reset_game(self, game_id: str) -> bool:
         """重置游戏状态，保留玩家但重置游戏地图和状态"""

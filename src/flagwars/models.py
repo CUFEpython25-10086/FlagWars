@@ -211,12 +211,16 @@ class GameState:
         if player_id in self.players:
             player = self.players[player_id]
             
-            # 清除玩家拥有的所有地块
+            # 将玩家拥有的所有地块变为中立，但保留兵力
             for row in self.tiles:
                 for tile in row:
                     if tile.owner and tile.owner.id == player_id:
+                        # 保留兵力，但将所有者设为None，变为中立
                         tile.owner = None
-                        tile.soldiers = 0
+                        # 基地变为普通平原
+                        if tile.terrain_type == TerrainType.BASE:
+                            tile.terrain_type = TerrainType.PLAIN
+                            tile.required_soldiers = 0
             
             # 从玩家字典中删除
             del self.players[player_id]
