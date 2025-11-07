@@ -263,6 +263,7 @@ class GameManager:
         self.player_ready_states: Dict[str, Dict[int, bool]] = {}  # 玩家准备状态
         self.next_player_id = 1
         self.next_room_id = 1000  # 房间ID从1000开始
+        self.available_room_ids = set()  # 已释放的房间号集合
         
         # 预定义的8种玩家颜色
         self.player_colors = [
@@ -290,8 +291,15 @@ class GameManager:
     
     def create_room(self) -> str:
         """创建新房间并返回房间ID"""
-        room_id = str(self.next_room_id)
-        self.next_room_id += 1
+        # 如果有已释放的房间号，使用最小的可用房间号
+        if self.available_room_ids:
+            room_id_int = min(self.available_room_ids)
+            self.available_room_ids.remove(room_id_int)
+            room_id = str(room_id_int)
+        else:
+            # 否则使用next_room_id
+            room_id = str(self.next_room_id)
+            self.next_room_id += 1
         
         # 创建新游戏实例
         game_state = GameState()
@@ -580,6 +588,9 @@ class GameManager:
         if room_id in self.games:
             del self.games[room_id]
             logging.info(f"房间 {room_id} 已关闭")
+            
+            # 将房间号添加到可用房间号集合中
+            self.available_room_ids.add(int(room_id))
         
         if room_id in self.players:
             del self.players[room_id]
