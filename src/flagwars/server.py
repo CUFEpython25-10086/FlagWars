@@ -505,6 +505,11 @@ class GameManager:
             return False
         
         game_state = self.games[game_id]
+        
+        # 检查玩家是否为旁观者
+        if player_id in game_state.players and game_state.players[player_id].is_spectator:
+            return False
+        
         return game_state.move_soldiers(from_x, from_y, to_x, to_y, player_id)
     
     def get_game_state(self, game_id: str, player_id: int = None) -> dict:
@@ -513,6 +518,11 @@ class GameManager:
             return {}
         
         game_state = self.games[game_id]
+        
+        # 检查是否为旁观者玩家
+        is_spectator = False
+        if player_id and player_id in game_state.players:
+            is_spectator = game_state.players[player_id].is_spectator
         
         # 转换为可序列化的字典
         state_dict = {
@@ -536,8 +546,19 @@ class GameManager:
             for x in range(game_state.map_width):
                 tile = game_state.tiles[y][x]
                 
+                # 如果是旁观者，显示完整地图信息
+                if is_spectator:
+                    tile_data = {
+                        'x': tile.x,
+                        'y': tile.y,
+                        'terrain_type': tile.terrain_type.value,
+                        'owner_id': tile.owner.id if tile.owner else None,
+                        'soldiers': tile.soldiers,
+                        'required_soldiers': tile.required_soldiers,
+                        'is_fog': False  # 旁观者无战争迷雾
+                    }
                 # 如果指定了玩家ID且该地块对玩家不可见，则隐藏详细信息
-                if player_id and player_id in tile.visibility and not tile.visibility.get(player_id, False):
+                elif player_id and player_id in tile.visibility and not tile.visibility.get(player_id, False):
                     # 对于不可见的地块，显示真实地形信息但隐藏所有者和士兵数量
                     tile_data = {
                         'x': tile.x,
@@ -563,7 +584,7 @@ class GameManager:
                 row.append(tile_data)
             state_dict['tiles'].append(row)
         
-        # 序列化玩家，包含准备状态
+        # 序列化玩家，包含准备状态和旁观者状态
         for pid, player in game_state.players.items():
             state_dict['players'][pid] = {
                 'id': player.id,
@@ -571,6 +592,7 @@ class GameManager:
                 'color': player.color,
                 'base_position': player.base_position,
                 'is_alive': player.is_alive,
+                'is_spectator': player.is_spectator,  # 添加旁观者状态
                 'ready': self.player_ready_states.get(game_id, {}).get(pid, False)
             }
         
@@ -649,6 +671,7 @@ class GameManager:
         for i, player in enumerate(current_players):
             # 重置玩家状态
             player.is_alive = True
+            player.is_spectator = False  # 重置旁观者身份标记
             
             # 分配基地位置
             base_x, base_y = new_game_state.spawn_points[i]

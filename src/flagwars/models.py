@@ -21,6 +21,24 @@ class Player:
         self.color = color
         self.base_position: Optional[Tuple[int, int]] = None
         self.is_alive = True
+        self.is_spectator = False  # 新增：标记玩家是否为旁观者
+        self.ready = False  # 添加ready属性
+    
+    def eliminate(self):
+        """将玩家标记为已淘汰并设置为旁观者"""
+        self.is_alive = False
+        self.is_spectator = True
+    
+    def to_dict(self):
+        """将玩家信息转换为字典格式"""
+        return {
+            "player_id": self.id,
+            "name": self.name,
+            "color": self.color,
+            "is_alive": self.is_alive,
+            "is_spectator": self.is_spectator,
+            "ready": self.ready
+        }
 
 
 class Tile:
@@ -347,7 +365,8 @@ class GameState:
         if is_enemy_base and base_owner:
             # 只有当当前地块的所有者是攻击方时，才算占领成功
             if to_tile.owner is not None and to_tile.owner.id == player_id:
-                base_owner.is_alive = False
+                # 转移被淘汰玩家的所有兵力和地块给占领者
+                self.transfer_player_assets(base_owner.id, player_id)
         
         return True
     
@@ -426,6 +445,49 @@ class GameState:
             'total_soldiers': total_soldiers,
             'owned_tiles': owned_tiles
         }
+    
+    def transfer_player_assets(self, eliminated_player_id: int, conqueror_player_id: int):
+        """
+        转移被淘汰玩家的所有兵力和占领地块给占领者
+        
+        Args:
+            eliminated_player_id: 被淘汰玩家的ID
+            conqueror_player_id: 占领者玩家的ID
+        """
+        # 获取被淘汰玩家和占领者
+        eliminated_player = self.players.get(eliminated_player_id)
+        conqueror_player = self.players.get(conqueror_player_id)
+        
+        if not eliminated_player or not conqueror_player:
+            return
+        
+        # 转移地块所有权和兵力
+        for row in self.tiles:
+            for tile in row:
+                if tile.owner and tile.owner.id == eliminated_player_id:
+                    # 转移地块所有权
+                    tile.owner = conqueror_player
+                    
+                    # 如果是基地，更新占领者的基地位置
+                    if tile.terrain_type == TerrainType.BASE:
+                        # 清除原占领者的基地位置（如果有）
+                        if conqueror_player.base_position:
+                            old_base_x, old_base_y = conqueror_player.base_position
+                            if 0 <= old_base_x < self.map_width and 0 <= old_base_y < self.map_height:
+                                self.tiles[old_base_y][old_base_x].terrain_type = TerrainType.PLAIN
+                        
+                        # 设置新的基地位置
+                        conqueror_player.base_position = (tile.x, tile.y)
+        
+        # 将被淘汰玩家设置为旁观者
+        eliminated_player.eliminate()
+        
+        # 检查是否只剩一个存活玩家
+        alive_players = [p for p in self.players.values() if p.is_alive and not p.is_spectator]
+        if len(alive_players) <= 1:
+            self.game_over = True
+            if alive_players:
+                self.winner = alive_players[0].name
     
     def get_all_players_stats(self):
         """获取所有玩家的统计数据，按总兵力排序"""

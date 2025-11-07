@@ -811,6 +811,10 @@
             
             handle_game_state(data) {
                 this.game_state = data.game_state;
+                
+                // 更新回合数
+                document.getElementById("gameTick").textContent = `回合: ${this.game_state.tick}`;
+                
                 this.render();
             }
             
@@ -1006,6 +1010,13 @@
                     }
                 }
                 
+                // 检查当前玩家是否为旁观者
+                const current_player = this.game_state.players[this.player_id];
+                if (current_player && current_player.is_spectator) {
+                    document.getElementById("gameStatus").textContent = "您已被淘汰，只能观看游戏";
+                    return;
+                }
+                
                 const rect = this.canvas.getBoundingClientRect();
                 const x = event.clientX - rect.left;
                 const y = event.clientY - rect.top;
@@ -1051,6 +1062,13 @@
             
             handle_keyboard(event) {
                 if (!this.game_state || !this.selected_tile) return;
+                
+                // 检查当前玩家是否为旁观者
+                const current_player = this.game_state.players[this.player_id];
+                if (current_player && current_player.is_spectator) {
+                    document.getElementById("gameStatus").textContent = "您已被淘汰，只能观看游戏";
+                    return;
+                }
                 
                 const [x, y] = this.selected_tile;
                 let new_x = x;
@@ -1151,7 +1169,7 @@
                     colorIndicator.style.display = "inline-block";
                     colorIndicator.style.width = "12px";
                     colorIndicator.style.height = "12px";
-                    colorIndicator.style.backgroundColor = player.player_color;
+                    colorIndicator.style.backgroundColor = player.color;
                     colorIndicator.style.borderRadius = "50%";
                     colorIndicator.style.marginRight = "8px";
                     
@@ -1163,7 +1181,18 @@
                     playerStatus.className = "player-status";
                     
                     if (player.id === this.player_id) {
-                        playerStatus.textContent = "你";
+                        if (player.is_spectator) {
+                            playerStatus.textContent = "旁观者";
+                            playerStatus.style.backgroundColor = "rgba(255, 165, 0, 0.5)"; // 橙色表示旁观者
+                        } else {
+                            playerStatus.textContent = "你";
+                        }
+                    } else if (player.is_spectator) {
+                        playerStatus.textContent = "旁观者";
+                        playerStatus.style.backgroundColor = "rgba(255, 165, 0, 0.5)"; // 橙色表示旁观者
+                    } else if (!player.is_alive) {
+                        playerStatus.textContent = "已淘汰";
+                        playerStatus.style.backgroundColor = "rgba(255, 0, 0, 0.5)"; // 红色表示已淘汰
                     } else if (player.ready) {
                         playerStatus.textContent = "已准备";
                         playerStatus.classList.add("ready");
@@ -1337,6 +1366,36 @@
                 // 更新回合数显示
                 if (this.game_state && this.game_state.current_tick !== undefined) {
                     document.getElementById("gameTick").textContent = `回合: ${this.game_state.current_tick}`;
+                }
+                
+                // 检查当前玩家是否为旁观者
+                const current_player = this.game_state.players[this.player_id];
+                if (current_player && current_player.is_spectator) {
+                    // 在右上角显示旁观者状态，不影响观赛
+                    const spectatorBoxWidth = 200;
+                    const spectatorBoxHeight = 60;
+                    const spectatorBoxX = this.canvas_width - spectatorBoxWidth - 20;
+                    const spectatorBoxY = 20;
+                    
+                    // 绘制半透明背景框
+                    this.ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+                    this.ctx.fillRect(spectatorBoxX, spectatorBoxY, spectatorBoxWidth, spectatorBoxHeight);
+                    
+                    // 绘制边框
+                    this.ctx.strokeStyle = "rgba(255, 165, 0, 0.8)";
+                    this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(spectatorBoxX, spectatorBoxY, spectatorBoxWidth, spectatorBoxHeight);
+                    
+                    // 显示文字
+                    this.ctx.fillStyle = "white";
+                    this.ctx.font = "bold 16px Arial";
+                    this.ctx.textAlign = "center";
+                    this.ctx.fillText("您已被淘汰", spectatorBoxX + spectatorBoxWidth / 2, spectatorBoxY + 25);
+                    
+                    this.ctx.font = "14px Arial";
+                    this.ctx.fillText("现在您只能观看游戏", spectatorBoxX + spectatorBoxWidth / 2, spectatorBoxY + 45);
+                    
+                    // 继续渲染游戏画面，不返回
                 }
                 
                 if (this.game_state.game_over) {
