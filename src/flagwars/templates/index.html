@@ -204,6 +204,11 @@
                     <div class="status" id="connectionStatus">未连接</div>
                 </div>
                 
+                <div class="room-info" id="roomInfo" style="display: none;">
+                    <h3>房间信息</h3>
+                    <div class="status" id="roomNumber">房间号: -</div>
+                </div>
+                
                 <div class="controls">
                     <h3>游戏控制</h3>
                     <div class="status" id="gameStatus">等待加入游戏...</div>
@@ -392,6 +397,12 @@
                 
                 document.getElementById("gameStatus").textContent = `游戏已加入 - 玩家 ${this.player_id}`;
                 
+                // 显示房间号
+                if (data.room_id) {
+                    document.getElementById("roomInfo").style.display = "block";
+                    document.getElementById("roomNumber").textContent = `房间号: ${data.room_id}`;
+                }
+                
                 // 显示准备按钮
                 document.getElementById("readyBtn").style.display = "inline-block";
                 
@@ -403,6 +414,9 @@
                 const message = data.message;
                 document.getElementById("gameStatus").textContent = message;
                 document.getElementById("connectionStatus").textContent = "未连接";
+                
+                // 隐藏房间号
+                document.getElementById("roomInfo").style.display = "none";
                 
                 // 关闭WebSocket连接
                 if (this.ws) {
@@ -589,6 +603,9 @@
             on_ws_close(event) {
                 document.getElementById("connectionStatus").textContent = "连接已关闭";
                 document.getElementById("gameStatus").textContent = "游戏连接断开";
+                
+                // 隐藏房间号
+                document.getElementById("roomInfo").style.display = "none";
                 
                 // 重置游戏状态
                 this.game_id = null;
@@ -1175,6 +1192,10 @@
                 
                 document.getElementById("gameStatus").textContent = `房间创建成功 - 房间ID: ${data.room_id}`;
                 
+                // 显示房间号
+                document.getElementById("roomInfo").style.display = "block";
+                document.getElementById("roomNumber").textContent = `房间号: ${data.room_id}`;
+                
                 // 禁用用户名输入框
                 document.getElementById("playerName").disabled = true;
                 
@@ -1197,6 +1218,10 @@
                 this.pending_selected_tile = null; // 初始化待处理的选中位置
                 
                 document.getElementById("gameStatus").textContent = `房间加入成功 - 房间ID: ${data.room_id}`;
+                
+                // 显示房间号
+                document.getElementById("roomInfo").style.display = "block";
+                document.getElementById("roomNumber").textContent = `房间号: ${data.room_id}`;
                 
                 // 禁用用户名输入框
                 document.getElementById("playerName").disabled = true;

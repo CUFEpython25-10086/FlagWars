@@ -159,6 +159,7 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
         response = {
             'type': 'game_joined',
             'game_id': game_id,
+            'room_id': game_id,  # 添加房间ID，在这个实现中game_id就是room_id
             'player_id': player_id,
             'game_state': self.game_manager.get_game_state(game_id)
         }
