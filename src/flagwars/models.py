@@ -42,7 +42,8 @@ class Tile:
         elif self.terrain_type == TerrainType.BASE:
             return 10
         elif self.terrain_type == TerrainType.TOWER:
-            return 5
+            import random
+            return random.randint(5, 20)  # 塔楼所需士兵数量随机（5~20）
         elif self.terrain_type == TerrainType.WALL:
             return 3
         elif self.terrain_type == TerrainType.MOUNTAIN:
