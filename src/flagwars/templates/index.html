@@ -27,6 +27,7 @@
         .header {
             text-align: center;
             margin-bottom: 30px;
+            position: relative;
         }
         
         .header h1 {
@@ -38,6 +39,29 @@
         .header .subtitle {
             font-size: 1.2em;
             opacity: 0.9;
+        }
+        
+        .tutorial-btn {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .tutorial-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
         }
         
         .game-area {
@@ -242,6 +266,135 @@
             height: 20px;
             border-radius: 3px;
         }
+        
+        /* 教程弹窗样式 */
+        .tutorial-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            overflow: auto;
+        }
+        
+        .tutorial-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            color: white;
+        }
+        
+        .tutorial-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 15px;
+        }
+        
+        .tutorial-title {
+            font-size: 2em;
+            margin: 0;
+        }
+        
+        .tutorial-close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            width: auto;
+            transition: 0.3s;
+        }
+        
+        .tutorial-close:hover {
+            opacity: 0.7;
+        }
+        
+        .tutorial-section {
+            margin-bottom: 25px;
+        }
+        
+        .tutorial-section h3 {
+            color: #FFD700;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .terrain-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        .terrain-table th, .terrain-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .terrain-table th {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .terrain-icon {
+            font-size: 1.5em;
+            text-align: center;
+        }
+        
+        .quick-tips {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .quick-tips h4 {
+            margin-top: 0;
+            color: #FFD700;
+        }
+        
+        .quick-tips ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .quick-tips li {
+            margin-bottom: 8px;
+        }
+        
+        .tutorial-nav {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .tutorial-nav button {
+            width: auto;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .tutorial-nav button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .tutorial-nav .next {
+            margin-left: auto;
+        }
     </style>
 </head>
 <body>
@@ -249,6 +402,7 @@
         <div class="header">
             <h1>🚩 FlagWars</h1>
             <div class="subtitle">进攻、防守、合作与背叛……利用一切机会赢得胜利！</div>
+            <button class="tutorial-btn" id="tutorialBtn" title="查看教程">?</button>
         </div>
         
         <div class="game-area">
@@ -328,6 +482,120 @@
                         <span>沼泽</span>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 教程弹窗 -->
+    <div id="tutorialModal" class="tutorial-modal">
+        <div class="tutorial-content">
+            <div class="tutorial-header">
+                <h2 class="tutorial-title">FlagWars 新手教程</h2>
+                <button class="tutorial-close" id="closeTutorial">&times;</button>
+            </div>
+            
+            <div id="tutorialPage1" class="tutorial-page">
+                <div class="tutorial-section">
+                    <h3>🎮 游戏目标</h3>
+                    <p>占领所有对手的基地，成为最后的胜利者！</p>
+                </div>
+                
+                <div class="tutorial-section">
+                    <h3>🚀 快速开始</h3>
+                    <ol>
+                        <li>输入你的名字</li>
+                        <li>点击"加入游戏"</li>
+                        <li>等待其他玩家加入</li>
+                        <li>点击"准备"按钮</li>
+                        <li>游戏开始后，你将看到你的基地（显示为你选择的颜色）</li>
+                    </ol>
+                </div>
+                
+                <div class="tutorial-section">
+                    <h3>🎯 基础操作</h3>
+                    <ul>
+                        <li><strong>选择士兵</strong>：点击你的地块</li>
+                        <li><strong>移动士兵</strong>：使用方向键(↑↓←→)</li>
+                    </ul>
+                </div>
+                
+                <div class="quick-tips">
+                    <h4>💡 新手提示</h4>
+                    <ul>
+                        <li>游戏开始时，尽快占领周围的平原和塔楼</li>
+                        <li>基地是最重要的，务必防守</li>
+                        <li>观察对手动向，预判其策略</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div id="tutorialPage2" class="tutorial-page" style="display: none;">
+                <div class="tutorial-section">
+                    <h3>🗺️ 地形详解</h3>
+                    <table class="terrain-table">
+                        <thead>
+                            <tr>
+                                <th>地形</th>
+                                <th>生成士兵</th>
+                                <th>占领难度</th>
+                                <th>特殊效果</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="terrain-icon">🏠</span> 基地</td>
+                                <td>每刻1个</td>
+                                <td>0士兵</td>
+                                <td>失去即淘汰</td>
+                            </tr>
+                            <tr>
+                                <td><span class="terrain-icon">🗼</span> 塔楼</td>
+                                <td>每刻1个</td>
+                                <td>5士兵</td>
+                                <td>稳定兵源</td>
+                            </tr>
+                            <tr>
+                                <td><span class="terrain-icon">🟩</span> 平原</td>
+                                <td>15刻1个</td>
+                                <td>0士兵</td>
+                                <td>基础地形</td>
+                            </tr>
+                            <tr>
+                                <td><span class="terrain-icon">🧱</span> 城墙</td>
+                                <td>不生成</td>
+                                <td>3士兵</td>
+                                <td>可摧毁</td>
+                            </tr>
+                            <tr>
+                                <td><span class="terrain-icon">⛰️</span> 山脉</td>
+                                <td>不生成</td>
+                                <td>不可占领</td>
+                                <td>无法通过</td>
+                            </tr>
+                            <tr>
+                                <td><span class="terrain-icon">🌾</span> 沼泽</td>
+                                <td>不生成</td>
+                                <td>0士兵</td>
+                                <td>每刻减1兵</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="tutorial-section">
+                    <h3>⚡ 战略技巧</h3>
+                    <ul>
+                        <li><strong>开局</strong>：快速扩张，控制更多资源点</li>
+                        <li><strong>中期</strong>：平衡进攻与防守，寻找对手弱点</li>
+                        <li><strong>后期</strong>：集中兵力，发动决定性进攻</li>
+                        <li><strong>联盟</strong>：适时与其他玩家结盟，但时刻准备背叛</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="tutorial-nav">
+                <button id="prevPage" class="prev" style="display: none;">上一页</button>
+                <button id="nextPage" class="next">下一页</button>
             </div>
         </div>
     </div>
@@ -1455,8 +1723,89 @@
             }
         }
         
+        // 教程弹窗控制
+        let currentPage = 1;
+        const totalPages = 2;
+        
+        // 显示教程弹窗
+        function showTutorial() {
+            document.getElementById('tutorialModal').style.display = 'flex';
+            showPage(1);
+        }
+        
+        // 隐藏教程弹窗
+        function hideTutorial() {
+            document.getElementById('tutorialModal').style.display = 'none';
+        }
+        
+        // 显示指定页面
+        function showPage(page) {
+            currentPage = page;
+            
+            // 隐藏所有页面
+            const page1 = document.getElementById('tutorialPage1');
+            const page2 = document.getElementById('tutorialPage2');
+            
+            if (page1) page1.style.display = 'none';
+            if (page2) page2.style.display = 'none';
+            
+            // 显示当前页面
+            const currentPageElement = document.getElementById(`tutorialPage${page}`);
+            if (currentPageElement) {
+                currentPageElement.style.display = 'block';
+            }
+            
+            // 更新导航按钮状态
+            const prevBtn = document.getElementById('prevPage');
+            const nextPageBtn = document.getElementById('nextPage');
+            
+            if (prevBtn) {
+                prevBtn.style.display = (page === 1) ? 'none' : 'inline-block';
+            }
+            
+            if (nextPageBtn) {
+                nextPageBtn.style.display = (page === totalPages) ? 'none' : 'inline-block';
+            }
+        }
+        
+        // 上一页
+        function prevPage() {
+            if (currentPage > 1) {
+                showPage(currentPage - 1);
+            }
+        }
+        
+        // 下一页
+        function nextPage() {
+            if (currentPage < totalPages) {
+                showPage(currentPage + 1);
+            }
+        }
+        
         // 当页面加载完成后启动游戏
         window.addEventListener('load', () => {
+            // 初始化教程弹窗事件
+            const tutorialBtn = document.getElementById('tutorialBtn');
+            const closeTutorial = document.getElementById('closeTutorial');
+            const prevBtn = document.getElementById('prevPage');
+            const nextBtn = document.getElementById('nextPage');
+            const tutorialModal = document.getElementById('tutorialModal');
+            
+            if (tutorialBtn) tutorialBtn.addEventListener('click', showTutorial);
+            if (closeTutorial) closeTutorial.addEventListener('click', hideTutorial);
+            if (prevBtn) prevBtn.addEventListener('click', prevPage);
+            if (nextBtn) nextBtn.addEventListener('click', nextPage);
+            
+            // 点击弹窗外部关闭弹窗
+            if (tutorialModal) {
+                tutorialModal.addEventListener('click', function(event) {
+                    if (event.target === this) {
+                        hideTutorial();
+                    }
+                });
+            }
+            
+            // 启动游戏
             new FlagWarsClient();
         });
     </script>
