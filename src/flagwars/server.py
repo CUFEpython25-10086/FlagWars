@@ -515,8 +515,12 @@ class GameManager:
             'game_started': game_state.game_started,
             'winner': game_state.winner.name if game_state.winner else None,
             'tiles': [],
-            'players': {}
+            'players': {},
+            'leaderboard': []  # 添加排行榜数据
         }
+        
+        # 获取排行榜数据
+        state_dict['leaderboard'] = game_state.get_all_players_stats()
         
         # 序列化地图
         for y in range(game_state.map_height):

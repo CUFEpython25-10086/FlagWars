@@ -155,6 +155,66 @@
         .player-status.not-ready {
             background: rgba(244, 67, 54, 0.5);
         }
+        
+        .leaderboard {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+        
+        .leaderboard-rank {
+            font-weight: bold;
+            margin-right: 10px;
+            min-width: 25px;
+        }
+        
+        .leaderboard-name {
+            flex-grow: 1;
+            font-weight: bold;
+        }
+        
+        .leaderboard-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9em;
+        }
+        
+        .leaderboard-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .leaderboard-stat-icon {
+            font-size: 0.8em;
+        }
+        
+        .leaderboard-item.first-place {
+            background: rgba(255, 215, 0, 0.2);
+            border: 1px solid rgba(255, 215, 0, 0.5);
+        }
+        
+        .leaderboard-item.second-place {
+            background: rgba(192, 192, 192, 0.2);
+            border: 1px solid rgba(192, 192, 192, 0.5);
+        }
+        
+        .leaderboard-item.third-place {
+            background: rgba(205, 127, 50, 0.2);
+            border: 1px solid rgba(205, 127, 50, 0.5);
+        }
+        
         .legend-item {
             display: flex;
             align-items: center;
@@ -182,6 +242,11 @@
             </div>
             
             <div class="game-info">
+                <div class="leaderboard" id="leaderboardContainer" style="display: none;">
+                    <h3>实时排行榜</h3>
+                    <div id="leaderboardList"></div>
+                </div>
+                
                 <div class="player-setup">
                     <h3>玩家设置</h3>
                     <input type="text" id="playerName" placeholder="输入玩家名称" value="Player">
@@ -800,7 +865,7 @@
                     colorIndicator.style.display = "inline-block";
                     colorIndicator.style.width = "12px";
                     colorIndicator.style.height = "12px";
-                    colorIndicator.style.backgroundColor = player.color;
+                    colorIndicator.style.backgroundColor = player.player_color;
                     colorIndicator.style.borderRadius = "50%";
                     colorIndicator.style.marginRight = "8px";
                     
@@ -859,6 +924,9 @@
                 
                 // 渲染玩家列表
                 this.render_players_list();
+                
+                // 渲染排行榜
+                this.render_leaderboard();
             }
             
             render_tile(x, y) {
@@ -1003,6 +1071,86 @@
                     this.ctx.font = "24px Arial";
                     this.ctx.fillText("再来一局", this.canvas_width / 2, this.canvas_height / 2 + 50);
                 }
+            }
+            
+            // 渲染排行榜
+            render_leaderboard() {
+                // 如果游戏未开始或没有排行榜数据，隐藏排行榜
+                if (!this.game_state || !this.game_state.game_started || !this.game_state.leaderboard) {
+                    document.getElementById("leaderboardContainer").style.display = "none";
+                    return;
+                }
+                
+                // 显示排行榜容器
+                document.getElementById("leaderboardContainer").style.display = "block";
+                
+                const leaderboardList = document.getElementById("leaderboardList");
+                leaderboardList.innerHTML = "";
+                
+                // 渲染排行榜数据
+                this.game_state.leaderboard.forEach((player, index) => {
+                    const playerDiv = document.createElement("div");
+                    playerDiv.className = "leaderboard-item";
+                    
+                    // 前三名添加特殊样式
+                    if (index === 0) {
+                        playerDiv.classList.add("first-place");
+                    } else if (index === 1) {
+                        playerDiv.classList.add("second-place");
+                    } else if (index === 2) {
+                        playerDiv.classList.add("third-place");
+                    }
+                    
+                    // 排名
+                    const rankDiv = document.createElement("div");
+                    rankDiv.className = "leaderboard-rank";
+                    rankDiv.textContent = `${index + 1}.`;
+                    
+                    // 玩家名称
+                    const nameDiv = document.createElement("div");
+                    nameDiv.className = "leaderboard-name";
+                    
+                    // 添加颜色标识
+                    const colorIndicator = document.createElement("span");
+                    colorIndicator.style.display = "inline-block";
+                    colorIndicator.style.width = "12px";
+                    colorIndicator.style.height = "12px";
+                    colorIndicator.style.backgroundColor = player.color;
+                    colorIndicator.style.borderRadius = "50%";
+                    colorIndicator.style.marginRight = "8px";
+                    
+                    nameDiv.appendChild(colorIndicator);
+                    
+                    // 如果是当前玩家，添加标记
+                    if (player.player_id === this.player_id) {
+                        nameDiv.appendChild(document.createTextNode(player.player_name + " (你)"));
+                    } else {
+                        nameDiv.appendChild(document.createTextNode(player.player_name));
+                    }
+                    
+                    // 统计数据
+                    const statsDiv = document.createElement("div");
+                    statsDiv.className = "leaderboard-stats";
+                    
+                    // 兵力
+                    const soldiersDiv = document.createElement("div");
+                    soldiersDiv.className = "leaderboard-stat";
+                    soldiersDiv.innerHTML = `<span class="leaderboard-stat-icon">⚔️</span>${player.total_soldiers}`;
+                    
+                    // 地块
+                    const tilesDiv = document.createElement("div");
+                    tilesDiv.className = "leaderboard-stat";
+                    tilesDiv.innerHTML = `<span class="leaderboard-stat-icon">🏰</span>${player.owned_tiles}`;
+                    
+                    statsDiv.appendChild(soldiersDiv);
+                    statsDiv.appendChild(tilesDiv);
+                    
+                    playerDiv.appendChild(rankDiv);
+                    playerDiv.appendChild(nameDiv);
+                    playerDiv.appendChild(statsDiv);
+                    
+                    leaderboardList.appendChild(playerDiv);
+                });
             }
             
             render_waiting_screen() {

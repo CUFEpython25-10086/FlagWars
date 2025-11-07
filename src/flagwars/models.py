@@ -410,6 +410,42 @@ class GameState:
             if alive_players:
                 self.winner = alive_players[0]
     
+    def get_player_stats(self, player_id: int):
+        """获取玩家的统计数据（总兵力和占领地块数量）"""
+        total_soldiers = 0
+        owned_tiles = 0
+        
+        for row in self.tiles:
+            for tile in row:
+                if tile.owner and tile.owner.id == player_id:
+                    total_soldiers += tile.soldiers
+                    owned_tiles += 1
+        
+        return {
+            'total_soldiers': total_soldiers,
+            'owned_tiles': owned_tiles
+        }
+    
+    def get_all_players_stats(self):
+        """获取所有玩家的统计数据，按总兵力排序"""
+        players_stats = []
+        
+        for player_id, player in self.players.items():
+            stats = self.get_player_stats(player_id)
+            players_stats.append({
+                'player_id': player_id,
+                'player_name': player.name,
+                'player_color': player.color,
+                'total_soldiers': stats['total_soldiers'],
+                'owned_tiles': stats['owned_tiles'],
+                'is_alive': player.is_alive
+            })
+        
+        # 按总兵力降序排序，如果兵力相同则按占领地块数量排序
+        players_stats.sort(key=lambda x: (-x['total_soldiers'], -x['owned_tiles']))
+        
+        return players_stats
+    
     def move_soldiers(self, from_x: int, from_y: int, to_x: int, to_y: int, player_id: int):
         """添加移动士兵请求到队列"""
         if not (0 <= from_x < self.map_width and 0 <= from_y < self.map_height):
