@@ -1,35 +1,35 @@
 @echo off
 echo ========================================
-echo      FlagWars 游戏服务器启动脚本
+echo      FlagWars Game Server Launcher
 echo ========================================
 echo.
 
-REM 检查uv是否安装
+REM Check if uv is installed
 u list >nul 2>&1
 if errorlevel 1 (
-    echo 正在安装uv...
+    echo Installing uv...
     powershell -Command "irm https://astral.sh/uv/install.ps1 | iex"
     echo.
 )
 
-REM 检查Python环境
-echo 检查Python环境...
+REM Check Python environment
+echo Checking Python environment...
 uv python find >nul 2>&1
 if errorlevel 1 (
-    echo 正在安装Python...
+    echo Installing Python...
     uv python install
     echo.
 )
 
-REM 安装依赖
-echo 安装游戏依赖...
+REM Install dependencies
+echo Installing game dependencies...
 uv sync
 
-REM 启动服务器
+REM Start server
 echo.
-echo 启动FlagWars游戏服务器...
-echo 服务器将在 http://localhost:8888 启动
-echo 按 Ctrl+C 停止服务器
+echo Starting FlagWars game server...
+echo Server will start at http://localhost:8888
+echo Press Ctrl+C to stop the server
 echo.
 
 uv run python run_server.py
