@@ -46,6 +46,21 @@
             margin-bottom: 30px;
         }
         
+        .game-tick-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px 10px 0 0;
+            padding: 15px 20px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .game-tick {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+        
         .game-canvas-container {
             flex: 3;
             background: rgba(0, 0, 0, 0.3);
@@ -238,6 +253,9 @@
         
         <div class="game-area">
             <div class="game-canvas-container">
+                <div class="game-tick-container">
+                    <div class="game-tick" id="gameTick">回合: 0</div>
+                </div>
                 <canvas id="gameCanvas" width="800" height="600"></canvas>
             </div>
             
@@ -1048,6 +1066,11 @@
             }
             
             render_game_info() {
+                // 更新回合数显示
+                if (this.game_state && this.game_state.current_tick !== undefined) {
+                    document.getElementById("gameTick").textContent = `回合: ${this.game_state.current_tick}`;
+                }
+                
                 if (this.game_state.game_over) {
                     const winner = this.game_state.winner;
                     this.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
