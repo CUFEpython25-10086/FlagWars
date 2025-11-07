@@ -336,7 +336,12 @@ class GameManager:
         # 按加入顺序分配颜色
         player_index = len(self.players[room_id])
         predefined_colors = ["#FF0000", "#00FF00", "#0000FF", "#DAA520", "#FF00FF", "#00FFFF", "#FFA500", "#800080"]
+        color_names = ["Red", "Green", "Blue", "Gold", "Magenta", "Cyan", "Orange", "Purple"]
         player_color = predefined_colors[player_index % len(predefined_colors)]
+        
+        # 如果玩家使用默认名字"Player"，则改为颜色英文名
+        if player_name == "Player":
+            player_name = color_names[player_index % len(color_names)]
         
         player = Player(player_id, player_name, player_color)
         
