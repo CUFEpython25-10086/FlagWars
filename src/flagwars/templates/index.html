@@ -35,6 +35,20 @@
             font-size: 3em;
             margin: 0;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .header h1 .logo {
+            height: 1.2em;
+            width: auto;
+        }
+        
+        .header h1 .flag-icon {
+            height: 1.2em;
+            width: auto;
         }
         
         .header .subtitle {
@@ -401,8 +415,10 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚩 FlagWars</h1>
-            <div class="subtitle">进攻、防守、合作与背叛……利用一切机会赢得胜利！</div>
+            <h1>
+                <img src="/icons/icc.png" alt="Flag" class="flag-icon">
+                <img src="/icons/slog.png" alt="FlagWars" class="logo">
+            </h1>
             <button class="tutorial-btn" id="tutorialBtn" title="查看教程">?</button>
         </div>
         
