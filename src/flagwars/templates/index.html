@@ -2920,6 +2920,9 @@
                     const card = document.createElement('div');
                     card.className = 'music-card';
                     
+                    // 添加原始文件名作为数据属性
+                    card.setAttribute('data-filename', music);
+                    
                     if (isSelected) {
                         card.classList.add('selected');
                     }
@@ -2966,6 +2969,26 @@
             format_music_name(filename) {
                 // 移除文件扩展名并替换连字符为空格
                 return filename.replace('.mp3', '').replace(/-/g, ' ');
+            }
+            
+            // 将显示名称转换为文件名格式
+            name_to_filename(displayName) {
+                // 将显示名称转换为文件名格式
+                // 首先转换为小写并用连字符替换空格
+                let filename = displayName.toLowerCase().replace(/\s+/g, '-');
+                
+                // 根据已知的音乐文件名进行特殊处理
+                const nameMap = {
+                    'whispers of strategy': 'Whispers-of-Strategy.mp3',
+                    'electric heartbeat': 'Electric-Heartbeat.mp3',
+                    'moonlight and marmalade': 'Moonlight-and-Marmalade.mp3',
+                    'royal vict': 'royal-vict.mp3',
+                    'folk vict': 'folk-vict.mp3',
+                    'mario vict': 'mario-vict.mp3',
+                    'weird horn vict': 'weird-horn-vict.mp3'
+                };
+                
+                return nameMap[filename] || filename + '.mp3';
             }
             
             // 选择音乐
@@ -3024,13 +3047,9 @@
                     return;
                 }
                 
-                // 获取音乐文件名
-                const bgmName = selectedBgmCard.querySelector('.music-card-name').textContent;
-                const victoryName = selectedVictoryCard.querySelector('.music-card-name').textContent;
-                
-                // 转换为文件名格式（添加连字符和扩展名）
-                const bgm = bgmName.replace(/\s+/g, '-').toLowerCase() + '.mp3';
-                const victoryMusic = victoryName.replace(/\s+/g, '-').toLowerCase() + '.mp3';
+                // 直接从数据属性获取原始文件名
+                const bgm = selectedBgmCard.getAttribute('data-filename');
+                const victoryMusic = selectedVictoryCard.getAttribute('data-filename');
                 
                 try {
                     const response = await fetch('/api/user/music', {
