@@ -77,6 +77,30 @@ class Database:
                 )
             ''')
             
+            # 用户解锁背景音乐表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_unlocked_bgm (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    music_name TEXT NOT NULL,
+                    unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id),
+                    UNIQUE(user_id, music_name)
+                )
+            ''')
+            
+            # 用户解锁胜利音乐表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_unlocked_victory_music (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    music_name TEXT NOT NULL,
+                    unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id),
+                    UNIQUE(user_id, music_name)
+                )
+            ''')
+            
             conn.commit()
     
     def get_connection(self):
@@ -295,6 +319,74 @@ class Database:
             )
             
             return [dict(row) for row in cursor.fetchall()]
+    
+    def unlock_bgm(self, user_id: int, music_name: str) -> bool:
+        """解锁背景音乐"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT OR IGNORE INTO user_unlocked_bgm (user_id, music_name) VALUES (?, ?)",
+                    (user_id, music_name)
+                )
+                conn.commit()
+                return cursor.rowcount > 0
+        except sqlite3.Error:
+            return False
+    
+    def unlock_victory_music(self, user_id: int, music_name: str) -> bool:
+        """解锁胜利音乐"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT OR IGNORE INTO user_unlocked_victory_music (user_id, music_name) VALUES (?, ?)",
+                    (user_id, music_name)
+                )
+                conn.commit()
+                return cursor.rowcount > 0
+        except sqlite3.Error:
+            return False
+    
+    def get_unlocked_bgm(self, user_id: int) -> List[str]:
+        """获取用户已解锁的背景音乐列表"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT music_name FROM user_unlocked_bgm WHERE user_id = ?",
+                (user_id,)
+            )
+            return [row[0] for row in cursor.fetchall()]
+    
+    def get_unlocked_victory_music(self, user_id: int) -> List[str]:
+        """获取用户已解锁的胜利音乐列表"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT music_name FROM user_unlocked_victory_music WHERE user_id = ?",
+                (user_id,)
+            )
+            return [row[0] for row in cursor.fetchall()]
+    
+    def is_bgm_unlocked(self, user_id: int, music_name: str) -> bool:
+        """检查背景音乐是否已解锁"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT 1 FROM user_unlocked_bgm WHERE user_id = ? AND music_name = ?",
+                (user_id, music_name)
+            )
+            return cursor.fetchone() is not None
+    
+    def is_victory_music_unlocked(self, user_id: int, music_name: str) -> bool:
+        """检查胜利音乐是否已解锁"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT 1 FROM user_unlocked_victory_music WHERE user_id = ? AND music_name = ?",
+                (user_id, music_name)
+            )
+            return cursor.fetchone() is not None
 
 
 # 创建全局数据库实例
