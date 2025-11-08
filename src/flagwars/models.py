@@ -270,6 +270,12 @@ class GameState:
             # 从玩家字典中删除
             del self.players[player_id]
     
+    def update(self):
+        """更新游戏状态（供服务器调用）"""
+        # 只有在游戏已经开始且未结束时才更新
+        if self.game_started and not self.game_over:
+            self.update_game_tick()
+    
     def update_game_tick(self):
         """更新游戏刻"""
         self.current_tick += 1

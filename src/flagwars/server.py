@@ -291,6 +291,8 @@ class GameManager:
         self.player_ready_states: Dict[str, Dict[int, bool]] = {}  # 玩家准备状态
         self.player_user_mapping: Dict[int, int] = {}  # 玩家ID与用户ID的映射
         self.game_start_times: Dict[str, float] = {}  # 游戏开始时间
+        self.last_broadcast_time: Dict[str, float] = {}  # 每个游戏的最后广播时间
+        self.game_over_games: Set[str] = set()  # 已结束的游戏集合
         self.next_player_id = 1
         self.next_room_id = 1000  # 房间ID从1000开始
         self.available_room_ids = set()  # 已释放的房间号集合
@@ -537,6 +539,45 @@ class GameManager:
                     print(f"Error sending game state to player {player_id}: {e}")
                     # 连接可能已断开，移除连接
                     self.remove_player_connection(game_id, player_id)
+    
+    def broadcast_game_over(self, game_id: str):
+        """广播游戏结束消息给所有玩家"""
+        if game_id not in self.games or game_id not in self.players:
+            return
+        
+        game_state = self.games[game_id]
+        
+        message = {
+            'type': 'game_over',
+            'winner': game_state.winner.name if game_state.winner else None,
+            'game_state': self.get_game_state(game_id)
+        }
+        
+        for player_id, handler in self.players[game_id].items():
+            if handler:
+                try:
+                    handler.write_message(json.dumps(message, default=str))
+                except Exception as e:
+                    print(f"Error sending game over message to player {player_id}: {e}")
+                    # 连接可能已断开，移除连接
+                    self.remove_player_connection(game_id, player_id)
+        
+        # 发送胜利音效触发消息
+        if game_state.winner:
+            victory_message = {
+                'type': 'play_victory_sound',
+                'winner': game_state.winner.name,
+                'winner_id': game_state.winner.id
+            }
+            
+            for player_id, handler in self.players[game_id].items():
+                if handler:
+                    try:
+                        handler.write_message(json.dumps(victory_message, default=str))
+                    except Exception as e:
+                        print(f"Error sending victory sound message to player {player_id}: {e}")
+                        # 连接可能已断开，移除连接
+                        self.remove_player_connection(game_id, player_id)
     
     def move_soldiers(self, game_id: str, player_id: int, from_x: int, from_y: int, to_x: int, to_y: int) -> bool:
         """移动士兵"""

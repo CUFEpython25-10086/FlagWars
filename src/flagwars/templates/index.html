@@ -72,7 +72,7 @@
         .dot:nth-child(4) { top: 80%; left: 70%; }
         
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background: rgba(26, 26, 26, 0.85);
             backdrop-filter: blur(5px);
@@ -680,7 +680,7 @@
                 <div class="game-tick-container">
                     <div class="game-tick" id="gameTick">回合: 0</div>
                 </div>
-                <canvas id="gameCanvas" width="800" height="600"></canvas>
+                <canvas id="gameCanvas" width="800" height="800"></canvas>
             </div>
             
             <div class="game-info">
@@ -880,8 +880,14 @@
     </div>
 
     <!-- 音频元素 -->
-    <audio id="bgMusic" loop>
-        <source src="/music/home/Whispers of Strategy.mp3" type="audio/mpeg">
+    <audio id="bgMusic" loop preload="auto">
+        <source src="/music/home/Whispers-of-Strategy.mp3" type="audio/mpeg">
+        您的浏览器不支持音频元素。
+    </audio>
+    
+    <!-- 胜利音效元素 -->
+    <audio id="victorySound" preload="auto">
+        <source src="/music/vict/royal-vict.mp3" type="audio/mpeg">
         您的浏览器不支持音频元素。
     </audio>
 
@@ -904,12 +910,35 @@
                 
                 this.tile_size = 40;
                 this.canvas_width = 800;
-                this.canvas_height = 600;
+                this.canvas_height = 800;
                 
                 // 音乐控制
                 this.bgMusic = document.getElementById("bgMusic");
                 this.musicToggle = document.getElementById("musicToggle");
                 this.isMusicPlaying = false;
+                
+                // 胜利音效控制
+                this.victorySound = document.getElementById("victorySound");
+                
+                // 添加音频加载错误处理
+                this.victorySound.addEventListener('error', (e) => {
+                    console.error('胜利音效加载失败:', e);
+                    console.error('音频元素错误代码:', this.victorySound.error);
+                });
+                
+                this.victorySound.addEventListener('canplaythrough', () => {
+                    console.log('胜利音效已加载完成，可以播放');
+                });
+                
+                // 背景音乐加载错误处理
+                this.bgMusic.addEventListener('error', (e) => {
+                    console.error('背景音乐加载失败:', e);
+                    console.error('音频元素错误代码:', this.bgMusic.error);
+                });
+                
+                this.bgMusic.addEventListener('canplaythrough', () => {
+                    console.log('背景音乐已加载完成，可以播放');
+                });
                 
                 // 检查用户登录状态
                 this.check_login_status();
@@ -1125,6 +1154,9 @@
                         break;
                     case 'player_left':
                         this.handle_player_left(data);
+                        break;
+                    case 'play_victory_sound':
+                        this.handle_play_victory_sound(data);
                         break;
                 }
             }
@@ -1343,11 +1375,50 @@
                 
                 // 游戏重置后隐藏排行榜
                 document.getElementById("leaderboardContainer").style.display = "none";
+                
+                // 重置胜利音效元素状态
+                this.resetVictorySound();
+            }
+            
+            // 重置胜利音效元素状态
+            resetVictorySound() {
+                console.log("重置胜利音效状态");
+                console.log("重置前胜利音效状态:", {
+                    readyState: this.victorySound.readyState,
+                    currentTime: this.victorySound.currentTime,
+                    paused: this.victorySound.paused,
+                    ended: this.victorySound.ended,
+                    error: this.victorySound.error
+                });
+                
+                // 停止当前播放的音效
+                if (!this.victorySound.paused) {
+                    console.log("停止当前播放的胜利音效");
+                    this.victorySound.pause();
+                }
+                
+                // 重置音效到开头
+                this.victorySound.currentTime = 0;
+                
+                // 强制重新加载音效，确保下次能正常播放
+                console.log("强制重新加载胜利音效");
+                this.victorySound.load();
             }
             
             // 处理再来一局成功
             handle_play_again_success(data) {
                 document.getElementById("gameStatus").textContent = data.message;
+            }
+            
+            // 处理胜利音效消息
+            handle_play_victory_sound(data) {
+                // 播放胜利音效
+                this.play_victory_sound();
+                
+                // 可选：在游戏状态中显示胜利者信息
+                if (data.winner) {
+                    console.log(`玩家 ${data.winner} 获胜！`);
+                }
             }
             
             on_ws_close(event) {
@@ -2265,6 +2336,98 @@
                 } else {
                     this.musicToggle.textContent = "🔇 音乐关";
                     this.musicToggle.classList.add("muted");
+                }
+            }
+            
+            // 播放胜利音效
+            play_victory_sound() {
+                console.log("开始播放胜利音效");
+                console.log("胜利音效当前状态:", {
+                    readyState: this.victorySound.readyState,
+                    currentTime: this.victorySound.currentTime,
+                    paused: this.victorySound.paused,
+                    ended: this.victorySound.ended,
+                    error: this.victorySound.error
+                });
+                
+                // 记录背景音乐是否在播放
+                const wasMusicPlaying = this.isMusicPlaying;
+                
+                // 停止背景音乐
+                if (this.isMusicPlaying) {
+                    console.log("暂停背景音乐");
+                    this.bgMusic.pause();
+                }
+                
+                // 重置音效到开头，确保每次都能播放
+                this.victorySound.currentTime = 0;
+                
+                // 设置音量（略高于背景音乐）
+                this.victorySound.volume = 0.5;
+                
+                // 确保音效已加载完成
+                if (this.victorySound.readyState < 4) {
+                    console.log("胜利音效未加载完成，等待加载");
+                    // 如果音效未加载完成，等待加载后再播放
+                    this.victorySound.addEventListener('canplaythrough', () => {
+                        console.log("胜利音效加载完成，开始播放");
+                        this.playVictorySoundInternal(wasMusicPlaying);
+                    }, { once: true });
+                    
+                    // 强制重新加载音效
+                    this.victorySound.load();
+                } else {
+                    console.log("胜利音效已加载完成，直接播放");
+                    // 如果音效已加载完成，直接播放
+                    this.playVictorySoundInternal(wasMusicPlaying);
+                }
+            }
+            
+            // 内部播放胜利音效的方法
+            playVictorySoundInternal(wasMusicPlaying) {
+                console.log("内部播放胜利音效方法被调用");
+                console.log("胜利音效状态:", {
+                    readyState: this.victorySound.readyState,
+                    currentTime: this.victorySound.currentTime,
+                    paused: this.victorySound.paused,
+                    ended: this.victorySound.ended,
+                    error: this.victorySound.error
+                });
+                
+                // 重置音效到开头，确保每次都能播放
+                this.victorySound.currentTime = 0;
+                
+                // 播放音效
+                const playPromise = this.victorySound.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        console.log("胜利音效播放成功");
+                        
+                        // 设置音效播放结束后的事件监听器
+                        this.victorySound.onended = () => {
+                            console.log("胜利音效播放完毕");
+                            
+                            // 如果之前背景音乐在播放，则恢复播放
+                            if (wasMusicPlaying) {
+                                console.log("恢复背景音乐播放");
+                                const resumeMusicPromise = this.bgMusic.play();
+                                if (resumeMusicPromise !== undefined) {
+                                    resumeMusicPromise.then(() => {
+                                        console.log("背景音乐已恢复播放");
+                                    }).catch(error => {
+                                        console.error("背景音乐恢复播放失败:", error);
+                                        // 如果恢复失败，更新音乐按钮状态
+                                        this.isMusicPlaying = false;
+                                        this.update_music_button();
+                                    });
+                                }
+                            }
+                        };
+                    }).catch(error => {
+                        console.error("胜利音效播放失败:", error);
+                        console.error("胜利音效错误详情:", this.victorySound.error);
+                    });
                 }
             }
         }
