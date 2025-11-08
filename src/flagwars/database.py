@@ -30,9 +30,18 @@ class Database:
                     last_login TIMESTAMP,
                     total_games INTEGER DEFAULT 0,
                     wins INTEGER DEFAULT 0,
-                    losses INTEGER DEFAULT 0
+                    losses INTEGER DEFAULT 0,
+                    flags INTEGER DEFAULT 0
                 )
             ''')
+            
+            # 检查并添加flags字段（用于数据库迁移）
+            cursor.execute("PRAGMA table_info(users)")
+            columns = [column[1] for column in cursor.fetchall()]
+            if 'flags' not in columns:
+                cursor.execute("ALTER TABLE users ADD COLUMN flags INTEGER DEFAULT 0")
+                conn.commit()
+                print("已添加flags字段到users表")
             
             # 游戏记录表
             cursor.execute('''
@@ -253,7 +262,7 @@ class Database:
             cursor.execute(
                 """
                 SELECT 
-                    total_games, wins, losses
+                    total_games, wins, losses, flags
                 FROM users WHERE id = ?
                 """,
                 (user_id,)
@@ -266,6 +275,7 @@ class Database:
                 total_games = stats.get('total_games', 0)
                 wins = stats.get('wins', 0)
                 losses = stats.get('losses', 0)
+                flags = stats.get('flags', 0)
                 
                 # 计算胜率
                 win_rate = 0
@@ -276,6 +286,7 @@ class Database:
                     'total_games': total_games,
                     'wins': wins,
                     'losses': losses,
+                    'flags': flags,
                     'win_rate': win_rate
                 }
             
@@ -284,6 +295,7 @@ class Database:
                 'total_games': 0,
                 'wins': 0,
                 'losses': 0,
+                'flags': 0,
                 'win_rate': 0
             }
     
@@ -532,10 +544,59 @@ class Database:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT 1 FROM user_unlocked_victory_music WHERE user_id = ? AND music_name = ?",
+                "SELECT music_name FROM user_unlocked_victory_music WHERE user_id = ? AND music_name = ?",
                 (user_id, music_name)
             )
             return cursor.fetchone() is not None
+    
+    def get_user_flags(self, user_id: int) -> int:
+        """获取用户货币（旗）数量"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT flags FROM users WHERE id = ?", (user_id,))
+            result = cursor.fetchone()
+            return result[0] if result else 0
+    
+    def add_user_flags(self, user_id: int, flags: int) -> bool:
+        """增加用户货币（旗）数量"""
+        if flags <= 0:
+            return False
+        
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE users SET flags = flags + ? WHERE id = ?",
+                    (flags, user_id)
+                )
+                conn.commit()
+                return cursor.rowcount > 0
+        except sqlite3.Error:
+            return False
+    
+    def spend_user_flags(self, user_id: int, flags: int) -> bool:
+        """花费用户货币（旗）数量"""
+        if flags <= 0:
+            return False
+        
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                # 检查用户是否有足够的旗
+                cursor.execute("SELECT flags FROM users WHERE id = ?", (user_id,))
+                result = cursor.fetchone()
+                if not result or result[0] < flags:
+                    return False
+                
+                # 扣除旗
+                cursor.execute(
+                    "UPDATE users SET flags = flags - ? WHERE id = ?",
+                    (flags, user_id)
+                )
+                conn.commit()
+                return cursor.rowcount > 0
+        except sqlite3.Error:
+            return False
 
 
 # 创建全局数据库实例

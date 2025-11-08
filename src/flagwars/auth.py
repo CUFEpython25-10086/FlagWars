@@ -380,6 +380,154 @@ class UserMusicSettingsHandler(BaseHandler):
             })
 
 
+class ShopHandler(BaseHandler):
+    """商店页面处理器"""
+    
+    async def get(self):
+        """获取商店数据"""
+        try:
+            user = self.get_current_user()
+            if not user:
+                self.write_json({
+                    'success': False,
+                    'message': '请先登录'
+                })
+                return
+            
+            # 获取用户当前旗数
+            user_flags = db.get_user_flags(user['id'])
+            
+            # 获取用户已解锁的音乐
+            music_settings = db.get_user_music_settings(user['id'])
+            unlocked_bgm = music_settings.get('unlocked_bgm', [])
+            unlocked_victory = music_settings.get('unlocked_victory', [])
+            
+            # 获取所有可用音乐
+            available_music = db.get_available_music()
+            
+            # 构建商店数据，包含价格和解锁状态
+            shop_data = {
+                'user_flags': user_flags,
+                'bgm_items': [],
+                'victory_items': []
+            }
+            
+            # 处理背景音乐
+            for bgm in available_music['bgm']:
+                shop_data['bgm_items'].append({
+                    'name': bgm,
+                    'price': 1,  # 每个音乐价格为1个旗
+                    'unlocked': bgm in unlocked_bgm
+                })
+            
+            # 处理胜利音乐
+            for victory in available_music['victory']:
+                shop_data['victory_items'].append({
+                    'name': victory,
+                    'price': 1,  # 每个音乐价格为1个旗
+                    'unlocked': victory in unlocked_victory
+                })
+            
+            self.write_json({
+                'success': True,
+                'shop_data': shop_data
+            })
+            
+        except Exception as e:
+            logging.error(f"获取商店数据错误: {str(e)}")
+            self.write_json({
+                'success': False,
+                'message': '获取商店数据失败，请稍后再试'
+            })
+
+
+class PurchaseMusicHandler(BaseHandler):
+    """购买音乐处理器"""
+    
+    async def post(self):
+        """处理音乐购买请求"""
+        try:
+            user = self.get_current_user()
+            if not user:
+                self.write_json({
+                    'success': False,
+                    'message': '请先登录'
+                })
+                return
+            
+            data = json.loads(self.request.body.decode())
+            music_name = data.get('music_name')
+            music_type = data.get('music_type')  # 'bgm' 或 'victory'
+            
+            if not music_name or not music_type:
+                self.write_json({
+                    'success': False,
+                    'message': '缺少必要参数'
+                })
+                return
+            
+            if music_type not in ['bgm', 'victory']:
+                self.write_json({
+                    'success': False,
+                    'message': '无效的音乐类型'
+                })
+                return
+            
+            # 检查音乐是否已解锁
+            if music_type == 'bgm' and db.is_bgm_unlocked(user['id'], music_name):
+                self.write_json({
+                    'success': False,
+                    'message': '该背景音乐已经解锁'
+                })
+                return
+                
+            if music_type == 'victory' and db.is_victory_music_unlocked(user['id'], music_name):
+                self.write_json({
+                    'success': False,
+                    'message': '该胜利音乐已经解锁'
+                })
+                return
+            
+            # 检查用户是否有足够的旗
+            user_flags = db.get_user_flags(user['id'])
+            if user_flags < 1:
+                self.write_json({
+                    'success': False,
+                    'message': '旗数不足，无法购买'
+                })
+                return
+            
+            # 扣除旗并解锁音乐
+            if not db.spend_user_flags(user['id'], 1):
+                self.write_json({
+                    'success': False,
+                    'message': '扣除旗失败，请稍后再试'
+                })
+                return
+            
+            # 解锁音乐
+            if music_type == 'bgm':
+                db.unlock_bgm(user['id'], music_name)
+            else:
+                db.unlock_victory_music(user['id'], music_name)
+            
+            # 获取更新后的用户旗数
+            updated_flags = db.get_user_flags(user['id'])
+            
+            self.write_json({
+                'success': True,
+                'message': f'成功购买 {music_name}',
+                'updated_flags': updated_flags
+            })
+            
+        except Exception as e:
+            logging.error(f"购买音乐错误: {str(e)}")
+            self.write_json({
+                'success': False,
+                'message': '购买音乐失败，请稍后再试'
+            })
+
+
 # 路由配置
 auth_routes = [
     (r"/api/auth/login", LoginHandler),
@@ -389,4 +537,6 @@ auth_routes = [
     (r"/api/user/stats", UserStatsHandler),
     (r"/api/user/history", GameHistoryHandler),
     (r"/api/user/music", UserMusicSettingsHandler),
+    (r"/api/shop", ShopHandler),
+    (r"/api/shop/purchase", PurchaseMusicHandler),
 ]

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlagWars - 商店</title>
+    <link rel="icon" type="image/x-icon" href="/icons/image.ico">
+    <style>
+        :root {
+            /* 新的配色方案 */
+            --primary-100: #FF5733;
+            --primary-200: #ff8a5f;
+            --primary-300: #fff3bf;
+            --accent-100: #2E86AB;
+            --accent-200: #d0ffff;
+            --text-100: #FFFFFF;
+            --text-200: #e0e0e0;
+            --bg-100: #1A1A1A;
+            --bg-200: #292929;
+            --bg-300: #404040;
+        }
+        
+        html, body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Microsoft YaHei', sans-serif;
+            min-height: 100vh;
+            color: var(--text-100);
+        }
+        
+        body {
+            background-color: var(--bg-100);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: 
+                /* 深色虚线层（节奏线） */
+                repeating-linear-gradient(to right, transparent 0 38px, rgba(255, 87, 51, 0.2) 38px 40px, transparent 40px 120px), 
+                repeating-linear-gradient(to bottom, transparent 0 38px, rgba(255, 87, 51, 0.2) 38px 40px, transparent 40px 120px), 
+                /* 浅色实线层（主网格） */
+                linear-gradient(to right, rgba(46, 134, 171, 0.15) 1px, transparent 1px), 
+                linear-gradient(to bottom, rgba(46, 134, 171, 0.15) 1px, transparent 1px), 
+                /* 噪声层（纸质质感） */
+                radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 1%, transparent 1%) repeat;
+            background-size: 
+                120px 120px,   /* 虚线节奏水平 */
+                120px 120px,   /* 虚线节奏垂直 */
+                60px 60px,     /* 实线水平 */
+                60px 60px,     /* 实线垂直 */
+                4px 4px;       /* 噪声纹理 */
+            background-position: center;
+            z-index: -1;
+        }
+        
+        /* 小方块点缀 */
+        .dot {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background-color: var(--primary-200);
+            z-index: -1;
+        }
+        
+        /* 随机分布的小方块 */
+        .dot:nth-child(1) { top: 30%; left: 45%; }
+        .dot:nth-child(2) { top: 55%; left: 60%; }
+        .dot:nth-child(3) { top: 72%; left: 40%; }
+        .dot:nth-child(4) { top: 80%; left: 70%; }
+        
+        .shop-container {
+            max-width: 1000px;
+            width: 100%;
+            background: rgba(26, 26, 26, 0.85);
+            backdrop-filter: blur(5px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--bg-300);
+            margin-bottom: 20px;
+        }
+        
+        .shop-header {
+            text-align: center;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .shop-header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            color: var(--text-100);
+            background: var(--bg-300);
+            padding: 15px 30px;
+            border-radius: 15px;
+            border: 1px solid var(--bg-200);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .user-flags {
+            display: flex;
+            align-items: center;
+            background: var(--bg-300);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--bg-200);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .flag-icon {
+            height: 24px;
+            width: auto;
+            margin-right: 10px;
+            background-image: url('/icons/slog.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        
+        .flag-count {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--primary-100);
+        }
+        
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+        
+        .nav-btn {
+            padding: 10px 20px;
+            background: var(--bg-300);
+            border: 1px solid var(--bg-200);
+            border-radius: 8px;
+            color: var(--text-100);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-btn:hover {
+            background: var(--primary-100);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 87, 51, 0.3);
+        }
+        
+        .nav-btn.active {
+            background: var(--primary-100);
+        }
+        
+        .shop-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .shop-section {
+            background: var(--bg-200);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid var(--bg-300);
+        }
+        
+        .section-title {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            color: var(--text-100);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .music-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .music-item {
+            background: var(--bg-300);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid var(--bg-200);
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .music-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .music-item.unlocked {
+            border-color: var(--accent-100);
+            background: rgba(46, 134, 171, 0.1);
+        }
+        
+        .music-name {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: var(--text-100);
+        }
+        
+        .music-price {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            color: var(--text-200);
+        }
+        
+        .price-flag {
+            height: 16px;
+            width: auto;
+            margin-right: 5px;
+        }
+        
+        .unlock-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .unlock-status.unlocked {
+            background: var(--accent-100);
+            color: white;
+        }
+        
+        .unlock-status.locked {
+            background: var(--bg-200);
+            color: var(--text-200);
+        }
+        
+        .purchase-btn {
+            width: 100%;
+            padding: 8px;
+            background: var(--primary-100);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        
+        .purchase-btn:hover:not(:disabled) {
+            background: var(--primary-200);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 87, 51, 0.3);
+        }
+        
+        .purchase-btn:disabled {
+            background: var(--bg-200);
+            color: var(--text-200);
+            cursor: not-allowed;
+        }
+        
+        .message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            max-width: 300px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+        }
+        
+        .message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .message.success {
+            background: #2ecc71;
+        }
+        
+        .message.error {
+            background: #e74c3c;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-200);
+        }
+    </style>
+</head>
+<body>
+    <!-- 小方块点缀 -->
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    
+    <div class="shop-container">
+        <div class="shop-header">
+            <h1>🏪 音乐商店</h1>
+            <div class="user-flags">
+                <img src="/icons/flag.png" alt="旗" class="flag-icon">
+                <span class="flag-count" id="flagCount">0</span>
+            </div>
+        </div>
+        
+        <div class="nav-buttons">
+            <a href="/" class="nav-btn">
+                🏠 返回主页
+            </a>
+            <a href="/profile" class="nav-btn">
+                👤 个人资料
+            </a>
+        </div>
+        
+        <div class="loading" id="loadingMessage">加载中...</div>
+        
+        <div class="shop-sections" id="shopContent" style="display: none;">
+            <div class="shop-section">
+                <h2 class="section-title">
+                    🎵 背景音乐
+                </h2>
+                <div class="music-grid" id="bgmGrid">
+                    <!-- 背景音乐项目将通过JavaScript动态加载 -->
+                </div>
+            </div>
+            
+            <div class="shop-section">
+                <h2 class="section-title">
+                    🏆 胜利音乐
+                </h2>
+                <div class="music-grid" id="victoryGrid">
+                    <!-- 胜利音乐项目将通过JavaScript动态加载 -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 消息提示 -->
+    <div class="message" id="messageBox"></div>
+    
+    <script>
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadShopData();
+        });
+        
+        // 加载商店数据
+        async function loadShopData() {
+            try {
+                const response = await fetch('/api/shop');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateShopUI(data.shop_data);
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    document.getElementById('shopContent').style.display = 'flex';
+                } else {
+                    showMessage(data.message || '加载商店数据失败', 'error');
+                }
+            } catch (error) {
+                console.error('加载商店数据错误:', error);
+                showMessage('加载商店数据失败，请稍后再试', 'error');
+            }
+        }
+        
+        // 更新商店UI
+        function updateShopUI(shopData) {
+            // 更新旗数显示
+            document.getElementById('flagCount').textContent = shopData.user_flags;
+            
+            // 更新背景音乐
+            const bgmGrid = document.getElementById('bgmGrid');
+            bgmGrid.innerHTML = '';
+            
+            shopData.bgm_items.forEach(item => {
+                const musicElement = createMusicItem(item, 'bgm');
+                bgmGrid.appendChild(musicElement);
+            });
+            
+            // 更新胜利音乐
+            const victoryGrid = document.getElementById('victoryGrid');
+            victoryGrid.innerHTML = '';
+            
+            shopData.victory_items.forEach(item => {
+                const musicElement = createMusicItem(item, 'victory');
+                victoryGrid.appendChild(musicElement);
+            });
+        }
+        
+        // 创建音乐项目元素
+        function createMusicItem(item, type) {
+            const div = document.createElement('div');
+            div.className = `music-item ${item.unlocked ? 'unlocked' : ''}`;
+            
+            div.innerHTML = `
+                <div class="unlock-status ${item.unlocked ? 'unlocked' : 'locked'}">
+                    ${item.unlocked ? '已解锁' : '未解锁'}
+                </div>
+                <div class="music-name">${item.name}</div>
+                <div class="music-price">
+                    <img src="/icons/flag.png" alt="旗" class="price-flag">
+                    <span>${item.price} 旗</span>
+                </div>
+                <button class="purchase-btn" 
+                        ${item.unlocked ? 'disabled' : ''} 
+                        onclick="purchaseMusic('${item.name}', '${type}')">
+                    ${item.unlocked ? '已拥有' : '购买'}
+                </button>
+            `;
+            
+            return div;
+        }
+        
+        // 购买音乐
+        async function purchaseMusic(musicName, musicType) {
+            try {
+                const response = await fetch('/api/shop/purchase', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        music_name: musicName,
+                        music_type: musicType
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    // 重新加载商店数据以更新UI
+                    setTimeout(loadShopData, 1000);
+                } else {
+                    showMessage(data.message || '购买失败', 'error');
+                }
+            } catch (error) {
+                console.error('购买音乐错误:', error);
+                showMessage('购买失败，请稍后再试', 'error');
+            }
+        }
+        
+        // 显示消息
+        function showMessage(text, type) {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.textContent = text;
+            messageBox.className = `message ${type}`;
+            
+            // 显示消息
+            setTimeout(() => {
+                messageBox.classList.add('show');
+            }, 10);
+            
+            // 3秒后隐藏消息
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

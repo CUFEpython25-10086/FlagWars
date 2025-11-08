@@ -755,6 +755,11 @@ class GameManager:
                         db.update_user_stats(user_id, {
                             'won': player == game_state.winner
                         })
+                        
+                        # 为胜利者增加一个"旗"作为奖励
+                        if player == game_state.winner:
+                            db.add_user_flags(user_id, 1)
+                            logging.info(f"为胜利者 {player.name} (用户ID: {user_id}) 增加了1个旗")
             
             logging.info(f"游戏 {game_id} 结果已记录到数据库，结束类型: {game_state.game_over_type}")
             
@@ -906,6 +911,17 @@ class LoginHandler(web.RequestHandler):
             self.write(f.read())
 
 
+class ShopPageHandler(web.RequestHandler):
+    """商店页面处理器"""
+    
+    def get(self):
+        """提供商店页面"""
+        import os
+        template_path = os.path.join(os.path.dirname(__file__), 'templates', 'shop.html')
+        with open(template_path, 'r', encoding='utf-8') as f:
+            self.write(f.read())
+
+
 def make_app():
     """创建Tornado应用"""
     game_manager = GameManager()
@@ -918,6 +934,7 @@ def make_app():
     routes = [
         (r"/", MainHandler),
         (r"/login", LoginHandler),
+        (r"/shop", ShopPageHandler),
         (r"/ws", GameWebSocketHandler, {"game_manager": game_manager}),
         (r"/static/(.*)", web.StaticFileHandler, {"path": os.path.join(project_root, "static")}),
         (r"/icons/(.*)", web.StaticFileHandler, {"path": os.path.join(project_root, "icons")}),
