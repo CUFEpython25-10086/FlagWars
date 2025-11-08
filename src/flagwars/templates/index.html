@@ -751,6 +751,90 @@
             gap: 15px;
         }
         
+        .music-columns {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .music-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .music-column h5 {
+            margin: 0;
+            color: var(--text-200);
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        .music-cards-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .music-card {
+            background: var(--bg-200);
+            border: 1px solid var(--bg-300);
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .music-card:hover {
+            background: var(--bg-300);
+            transform: translateY(-2px);
+        }
+        
+        .music-card.selected {
+            background: var(--primary-100);
+            border-color: var(--primary-200);
+        }
+        
+        .music-card.locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: var(--bg-100);
+        }
+        
+        .music-card.locked:hover {
+            transform: none;
+            background: var(--bg-100);
+        }
+        
+        .music-card-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        
+        .music-card-info {
+            flex: 1;
+        }
+        
+        .music-card-name {
+            font-weight: bold;
+            color: var(--text-100);
+        }
+        
+        .music-card-status {
+            font-size: 12px;
+            color: var(--text-200);
+        }
+        
         .setting-item {
             display: flex;
             align-items: center;
@@ -941,22 +1025,19 @@
                 <div class="stats-section">
                     <h4>音乐设置</h4>
                     <div class="music-settings">
-                        <div class="setting-item">
-                            <label for="bgmSelect">背景音乐:</label>
-                            <select id="bgmSelect" class="setting-select">
-                                <option value="Whispers-of-Strategy.mp3">Whispers of Strategy</option>
-                                <option value="Electric-Heartbeat.mp3">Electric Heartbeat</option>
-                                <option value="Moonlight-and-Marmalade.mp3">Moonlight and Marmalade</option>
-                            </select>
-                        </div>
-                        <div class="setting-item">
-                            <label for="victoryMusicSelect">胜利音乐:</label>
-                            <select id="victoryMusicSelect" class="setting-select">
-                                <option value="royal-vict.mp3">Royal Victory</option>
-                                <option value="folk-vict.mp3">Folk Victory</option>
-                                <option value="mario-vict.mp3">Mario Victory</option>
-                                <option value="weird-horn-vict.mp3">Weird Horn Victory</option>
-                            </select>
+                        <div class="music-columns">
+                            <div class="music-column">
+                                <h5>背景音乐</h5>
+                                <div class="music-cards-container" id="bgmCardsContainer">
+                                    <!-- 背景音乐卡片将通过JavaScript动态生成 -->
+                                </div>
+                            </div>
+                            <div class="music-column">
+                                <h5>胜利音乐</h5>
+                                <div class="music-cards-container" id="victoryCardsContainer">
+                                    <!-- 胜利音乐卡片将通过JavaScript动态生成 -->
+                                </div>
+                            </div>
                         </div>
                         <button id="saveMusicSettings" class="btn-primary">保存设置</button>
                     </div>
@@ -2797,10 +2878,134 @@
             
             // 更新音乐设置显示
             update_music_settings_display(musicData) {
-                // 从后端返回的数据结构中正确获取音乐设置
+                // 获取音乐设置和可用音乐列表
                 const settings = musicData.music_settings || {};
-                document.getElementById('bgmSelect').value = settings.selected_bgm || 'Whispers-of-Strategy.mp3';
-                document.getElementById('victoryMusicSelect').value = settings.selected_victory || 'royal-vict.mp3';
+                const availableMusic = musicData.available_music || {};
+                const unlockedBgm = settings.unlocked_bgm || [];
+                const unlockedVictory = settings.unlocked_victory || [];
+                const selectedBgm = settings.selected_bgm || 'Whispers-of-Strategy.mp3';
+                const selectedVictory = settings.selected_victory || 'royal-vict.mp3';
+                
+                // 生成背景音乐卡片
+                this.generate_music_cards(
+                    'bgmCardsContainer',
+                    availableMusic.bgm || [],
+                    unlockedBgm,
+                    selectedBgm,
+                    'bgm'
+                );
+                
+                // 生成胜利音乐卡片
+                this.generate_music_cards(
+                    'victoryCardsContainer',
+                    availableMusic.victory || [],
+                    unlockedVictory,
+                    selectedVictory,
+                    'victory'
+                );
+            }
+            
+            // 生成音乐卡片
+            generate_music_cards(containerId, allMusic, unlockedMusic, selectedMusic, type) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                
+                container.innerHTML = '';
+                
+                allMusic.forEach(music => {
+                    const isUnlocked = unlockedMusic.includes(music);
+                    const isSelected = music === selectedMusic;
+                    
+                    // 创建音乐卡片
+                    const card = document.createElement('div');
+                    card.className = 'music-card';
+                    
+                    if (isSelected) {
+                        card.classList.add('selected');
+                    }
+                    
+                    if (!isUnlocked) {
+                        card.classList.add('locked');
+                    }
+                    
+                    // 音乐图标
+                    const icon = document.createElement('div');
+                    icon.className = 'music-card-icon';
+                    icon.textContent = isUnlocked ? '🎵' : '🔒';
+                    
+                    // 音乐信息
+                    const info = document.createElement('div');
+                    info.className = 'music-card-info';
+                    
+                    const name = document.createElement('div');
+                    name.className = 'music-card-name';
+                    name.textContent = this.format_music_name(music);
+                    
+                    const status = document.createElement('div');
+                    status.className = 'music-card-status';
+                    status.textContent = isUnlocked ? (isSelected ? '当前选择' : '已解锁') : '未解锁';
+                    
+                    info.appendChild(name);
+                    info.appendChild(status);
+                    
+                    card.appendChild(icon);
+                    card.appendChild(info);
+                    
+                    // 添加点击事件
+                    if (isUnlocked) {
+                        card.addEventListener('click', () => {
+                            this.select_music(music, type);
+                        });
+                    }
+                    
+                    container.appendChild(card);
+                });
+            }
+            
+            // 格式化音乐名称
+            format_music_name(filename) {
+                // 移除文件扩展名并替换连字符为空格
+                return filename.replace('.mp3', '').replace(/-/g, ' ');
+            }
+            
+            // 选择音乐
+            select_music(musicName, type) {
+                // 更新选中状态
+                const containerId = type === 'bgm' ? 'bgmCardsContainer' : 'victoryCardsContainer';
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                
+                // 移除所有选中状态
+                const cards = container.querySelectorAll('.music-card');
+                cards.forEach(card => {
+                    card.classList.remove('selected');
+                });
+                
+                // 添加新的选中状态
+                const selectedCard = Array.from(cards).find(card => {
+                    const nameElement = card.querySelector('.music-card-name');
+                    return nameElement && nameElement.textContent === this.format_music_name(musicName);
+                });
+                
+                if (selectedCard) {
+                    selectedCard.classList.add('selected');
+                    
+                    // 更新状态文本
+                    const statusElement = selectedCard.querySelector('.music-card-status');
+                    if (statusElement) {
+                        statusElement.textContent = '当前选择';
+                    }
+                    
+                    // 重置其他卡片的状态文本
+                    cards.forEach(card => {
+                        if (card !== selectedCard) {
+                            const status = card.querySelector('.music-card-status');
+                            if (status && !card.classList.contains('locked')) {
+                                status.textContent = '已解锁';
+                            }
+                        }
+                    });
+                }
             }
             
             // 保存音乐设置
@@ -2810,8 +3015,22 @@
                     return;
                 }
                 
-                const bgm = document.getElementById('bgmSelect').value;
-                const victoryMusic = document.getElementById('victoryMusicSelect').value;
+                // 获取当前选中的音乐
+                const selectedBgmCard = document.querySelector('#bgmCardsContainer .music-card.selected');
+                const selectedVictoryCard = document.querySelector('#victoryCardsContainer .music-card.selected');
+                
+                if (!selectedBgmCard || !selectedVictoryCard) {
+                    document.getElementById("gameStatus").textContent = "请选择背景音乐和胜利音乐";
+                    return;
+                }
+                
+                // 获取音乐文件名
+                const bgmName = selectedBgmCard.querySelector('.music-card-name').textContent;
+                const victoryName = selectedVictoryCard.querySelector('.music-card-name').textContent;
+                
+                // 转换为文件名格式（添加连字符和扩展名）
+                const bgm = bgmName.replace(/\s+/g, '-').toLowerCase() + '.mp3';
+                const victoryMusic = victoryName.replace(/\s+/g, '-').toLowerCase() + '.mp3';
                 
                 try {
                     const response = await fetch('/api/user/music', {

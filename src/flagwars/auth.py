@@ -343,6 +343,21 @@ class UserMusicSettingsHandler(BaseHandler):
                 })
                 return
             
+            # 检查音乐是否已解锁
+            if bgm_name and not db.is_bgm_unlocked(user['id'], bgm_name):
+                self.write_json({
+                    'success': False,
+                    'message': '该背景音乐尚未解锁'
+                })
+                return
+                
+            if victory_music_name and not db.is_victory_music_unlocked(user['id'], victory_music_name):
+                self.write_json({
+                    'success': False,
+                    'message': '该胜利音乐尚未解锁'
+                })
+                return
+            
             # 更新用户音乐选择
             success = db.update_user_music_selection(user['id'], bgm_name, victory_music_name)
             
