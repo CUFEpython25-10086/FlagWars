@@ -30,9 +30,7 @@ class Database:
                     last_login TIMESTAMP,
                     total_games INTEGER DEFAULT 0,
                     wins INTEGER DEFAULT 0,
-                    losses INTEGER DEFAULT 0,
-                    total_soldiers_killed INTEGER DEFAULT 0,
-                    total_tiles_captured INTEGER DEFAULT 0
+                    losses INTEGER DEFAULT 0
                 )
             ''')
             
@@ -57,8 +55,6 @@ class Database:
                     game_id INTEGER NOT NULL,
                     user_id INTEGER NOT NULL,
                     final_rank INTEGER,
-                    soldiers_killed INTEGER DEFAULT 0,
-                    tiles_captured INTEGER DEFAULT 0,
                     survived BOOLEAN DEFAULT FALSE,
                     FOREIGN KEY (game_id) REFERENCES games (id),
                     FOREIGN KEY (user_id) REFERENCES users (id)
@@ -101,6 +97,24 @@ class Database:
                 )
             ''')
             
+            # 用户选择的背景音乐表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_selected_bgm (
+                    user_id INTEGER PRIMARY KEY,
+                    bgm_name TEXT NOT NULL DEFAULT 'Whispers-of-Strategy.mp3',
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+            ''')
+            
+            # 用户选择的胜利音乐表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_selected_victory_music (
+                    user_id INTEGER PRIMARY KEY,
+                    victory_music_name TEXT NOT NULL DEFAULT 'royal-vict.mp3',
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+            ''')
+            
             conn.commit()
     
     def get_connection(self):
@@ -127,8 +141,30 @@ class Database:
                     "INSERT INTO users (username, email, password_hash, salt) VALUES (?, ?, ?, ?)",
                     (username, email, password_hash, salt)
                 )
+                user_id = cursor.lastrowid
+                
+                # 为用户设置默认音乐选择
+                cursor.execute(
+                    "INSERT INTO user_selected_bgm (user_id, bgm_name) VALUES (?, ?)",
+                    (user_id, 'Whispers-of-Strategy.mp3')
+                )
+                cursor.execute(
+                    "INSERT INTO user_selected_victory_music (user_id, victory_music_name) VALUES (?, ?)",
+                    (user_id, 'royal-vict.mp3')
+                )
+                
+                # 为用户解锁默认音乐
+                cursor.execute(
+                    "INSERT INTO user_unlocked_bgm (user_id, music_name) VALUES (?, ?)",
+                    (user_id, 'Whispers-of-Strategy.mp3')
+                )
+                cursor.execute(
+                    "INSERT INTO user_unlocked_victory_music (user_id, music_name) VALUES (?, ?)",
+                    (user_id, 'royal-vict.mp3')
+                )
+                
                 conn.commit()
-                return cursor.lastrowid
+                return user_id
         except sqlite3.IntegrityError:
             return None  # 用户名或邮箱已存在
     
@@ -218,7 +254,6 @@ class Database:
                 """
                 SELECT 
                     total_games, wins, losses, 
-                    total_soldiers_killed, total_tiles_captured,
                     CASE WHEN total_games > 0 THEN ROUND(wins * 100.0 / total_games, 2) ELSE 0 END AS win_rate
                 FROM users WHERE id = ?
                 """,
@@ -253,19 +288,6 @@ class Database:
                     (user_id,)
                 )
             
-            # 更新击杀士兵数和占领地块数
-            if 'soldiers_killed' in game_result:
-                cursor.execute(
-                    "UPDATE users SET total_soldiers_killed = total_soldiers_killed + ? WHERE id = ?",
-                    (game_result['soldiers_killed'], user_id)
-                )
-            
-            if 'tiles_captured' in game_result:
-                cursor.execute(
-                    "UPDATE users SET total_tiles_captured = total_tiles_captured + ? WHERE id = ?",
-                    (game_result['tiles_captured'], user_id)
-                )
-            
             conn.commit()
     
     def record_game(self, room_id: str, winner_id: Optional[int], game_duration: int, total_turns: int) -> int:
@@ -282,19 +304,47 @@ class Database:
             conn.commit()
             return cursor.lastrowid
     
-    def record_game_player(self, game_id: int, user_id: int, final_rank: int, 
-                          soldiers_killed: int, tiles_captured: int, survived: bool):
+    def record_game_player(self, game_id: int, user_id: int, final_rank: int, survived: bool):
         """记录游戏参与者信息"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                INSERT INTO game_players (game_id, user_id, final_rank, soldiers_killed, tiles_captured, survived)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO game_players (game_id, user_id, final_rank, survived)
+                VALUES (?, ?, ?, ?)
                 """,
-                (game_id, user_id, final_rank, soldiers_killed, tiles_captured, survived)
+                (game_id, user_id, final_rank, survived)
             )
             conn.commit()
+    
+    def get_available_music(self):
+        """获取所有可用的音乐"""
+        try:
+            # 这里应该从文件系统获取实际的音乐文件列表
+            # 为了简化，我们返回硬编码的列表
+            bgm_list = [
+                'Whispers-of-Strategy.mp3',
+                'Electric-Heartbeat.mp3',
+                'Moonlight-and-Marmalade.mp3'
+            ]
+            
+            victory_list = [
+                'royal-vict.mp3',
+                'folk-vict.mp3',
+                'mario-vict.mp3',
+                'weird-horn-vict.mp3'
+            ]
+            
+            return {
+                'bgm': bgm_list,
+                'victory': victory_list
+            }
+        except Exception as e:
+            print(f"获取可用音乐错误: {e}")
+            return {
+                'bgm': ['Whispers-of-Strategy.mp3'],
+                'victory': ['royal-vict.mp3']
+            }
     
     def get_user_game_history(self, user_id: int, limit: int = 10) -> List[Dict[str, Any]]:
         """获取用户游戏历史"""
@@ -319,6 +369,83 @@ class Database:
             )
             
             return [dict(row) for row in cursor.fetchall()]
+    
+    def get_user_music_settings(self, user_id):
+        """获取用户音乐设置"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # 获取用户选择的背景音乐
+                cursor.execute(
+                    "SELECT bgm_name FROM user_selected_bgm WHERE user_id = ?",
+                    (user_id,)
+                )
+                selected_bgm = cursor.fetchone()
+                selected_bgm = selected_bgm[0] if selected_bgm else 'Whispers-of-Strategy.mp3'
+                
+                # 获取用户选择的胜利音乐
+                cursor.execute(
+                    "SELECT victory_music_name FROM user_selected_victory_music WHERE user_id = ?",
+                    (user_id,)
+                )
+                selected_victory = cursor.fetchone()
+                selected_victory = selected_victory[0] if selected_victory else 'royal-vict.mp3'
+                
+                # 获取用户解锁的背景音乐
+                cursor.execute(
+                    "SELECT music_name FROM user_unlocked_bgm WHERE user_id = ?",
+                    (user_id,)
+                )
+                unlocked_bgm = [row[0] for row in cursor.fetchall()]
+                
+                # 获取用户解锁的胜利音乐
+                cursor.execute(
+                    "SELECT music_name FROM user_unlocked_victory_music WHERE user_id = ?",
+                    (user_id,)
+                )
+                unlocked_victory = [row[0] for row in cursor.fetchall()]
+                
+                return {
+                    'selected_bgm': selected_bgm,
+                    'selected_victory': selected_victory,
+                    'unlocked_bgm': unlocked_bgm,
+                    'unlocked_victory': unlocked_victory
+                }
+        except Exception as e:
+            print(f"获取用户音乐设置错误: {e}")
+            return {
+                'selected_bgm': 'Whispers-of-Strategy.mp3',
+                'selected_victory': 'royal-vict.mp3',
+                'unlocked_bgm': ['Whispers-of-Strategy.mp3'],
+                'unlocked_victory': ['royal-vict.mp3']
+            }
+    
+    def update_user_music_selection(self, user_id, bgm_name=None, victory_music_name=None):
+        """更新用户音乐选择"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # 更新背景音乐选择
+                if bgm_name:
+                    cursor.execute(
+                        "INSERT OR REPLACE INTO user_selected_bgm (user_id, bgm_name) VALUES (?, ?)",
+                        (user_id, bgm_name)
+                    )
+                
+                # 更新胜利音乐选择
+                if victory_music_name:
+                    cursor.execute(
+                        "INSERT OR REPLACE INTO user_selected_victory_music (user_id, victory_music_name) VALUES (?, ?)",
+                        (user_id, victory_music_name)
+                    )
+                
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"更新用户音乐选择错误: {e}")
+            return False
     
     def unlock_bgm(self, user_id: int, music_name: str) -> bool:
         """解锁背景音乐"""

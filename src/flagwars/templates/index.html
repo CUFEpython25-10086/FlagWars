@@ -652,6 +652,143 @@
             background: var(--primary-200);
             transform: translateY(-1px);
         }
+        
+        /* 用户信息统计弹窗样式 */
+        .user-stats-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .user-profile {
+            background: var(--bg-300);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid var(--bg-200);
+        }
+        
+        .profile-header {
+            text-align: center;
+        }
+        
+        .profile-header h3 {
+            margin: 0 0 15px 0;
+            color: var(--primary-200);
+            font-size: 1.5em;
+        }
+        
+        .profile-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: var(--bg-200);
+            border-radius: 8px;
+            min-width: 100px;
+            border: 1px solid var(--bg-300);
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: var(--text-200);
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--accent-100);
+        }
+        
+        .stats-section {
+            background: var(--bg-300);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid var(--bg-200);
+        }
+        
+        .stats-section h4 {
+            margin: 0 0 15px 0;
+            color: var(--text-100);
+            border-bottom: 1px solid var(--bg-200);
+            padding-bottom: 8px;
+        }
+        
+        .game-history {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .game-history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            margin: 5px 0;
+            background: var(--bg-200);
+            border-radius: 5px;
+            border: 1px solid var(--bg-300);
+        }
+        
+        .game-result {
+            font-weight: bold;
+        }
+        
+        .game-result.win {
+            color: #4CAF50;
+        }
+        
+        .game-result.lose {
+            color: #f44336;
+        }
+        
+        .music-settings {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .setting-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .setting-item label {
+            min-width: 100px;
+            color: var(--text-200);
+        }
+        
+        .setting-select {
+            flex: 1;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid var(--bg-300);
+            background: var(--bg-200);
+            color: var(--text-100);
+        }
+        
+        .btn-primary {
+            background: var(--primary-100);
+            color: var(--text-100);
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            width: auto;
+            margin-top: 10px;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-200);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -759,6 +896,69 @@
                     <div class="legend-item">
                         <div class="legend-color" style="background: #16a085;"></div>
                         <span>沼泽</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 用户信息统计弹窗 -->
+    <div id="userStatsModal" class="tutorial-modal">
+        <div class="tutorial-content">
+            <div class="tutorial-header">
+                <h2 class="tutorial-title">用户信息统计</h2>
+                <button class="tutorial-close" id="closeUserStats">&times;</button>
+            </div>
+            
+            <div class="user-stats-container">
+                <div class="user-profile">
+                    <div class="profile-header">
+                        <h3 id="statsUsername">用户名</h3>
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <div class="stat-label">总游戏数</div>
+                                <div class="stat-value" id="totalGames">0</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">胜利次数</div>
+                                <div class="stat-value" id="totalWins">0</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">胜率</div>
+                                <div class="stat-value" id="winRate">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stats-section">
+                    <h4>游戏历史</h4>
+                    <div class="game-history" id="gameHistory">
+                        <p>暂无游戏记录</p>
+                    </div>
+                </div>
+                
+                <div class="stats-section">
+                    <h4>音乐设置</h4>
+                    <div class="music-settings">
+                        <div class="setting-item">
+                            <label for="bgmSelect">背景音乐:</label>
+                            <select id="bgmSelect" class="setting-select">
+                                <option value="Whispers-of-Strategy.mp3">Whispers of Strategy</option>
+                                <option value="Electric-Heartbeat.mp3">Electric Heartbeat</option>
+                                <option value="Moonlight-and-Marmalade.mp3">Moonlight and Marmalade</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="victoryMusicSelect">胜利音乐:</label>
+                            <select id="victoryMusicSelect" class="setting-select">
+                                <option value="royal-vict.mp3">Royal Victory</option>
+                                <option value="folk-vict.mp3">Folk Victory</option>
+                                <option value="mario-vict.mp3">Mario Victory</option>
+                                <option value="weird-horn-vict.mp3">Weird Horn Victory</option>
+                            </select>
+                        </div>
+                        <button id="saveMusicSettings" class="btn-primary">保存设置</button>
                     </div>
                 </div>
             </div>
@@ -973,6 +1173,11 @@
                 // 退出登录按钮
                 document.getElementById("logoutBtn").addEventListener("click", () => this.logout());
                 
+                // 用户信息统计弹窗相关
+                document.getElementById("userDisplay").addEventListener("click", () => this.show_user_stats());
+                document.getElementById("closeUserStats").addEventListener("click", () => this.close_user_stats());
+                document.getElementById("saveMusicSettings").addEventListener("click", () => this.save_music_settings());
+                
                 // 画布点击事件
                 this.canvas.addEventListener("click", (e) => this.handle_canvas_click(e));
                 
@@ -1015,6 +1220,9 @@
                 // 启用房间创建和加入按钮
                 document.getElementById('createRoom').disabled = false;
                 document.getElementById('joinRoom').disabled = false;
+                
+                // 加载用户音乐设置
+                this.load_user_music_settings();
             }
             
             // 更新未登录用户的UI
@@ -1412,12 +1620,13 @@
             
             // 处理胜利音效消息
             handle_play_victory_sound(data) {
-                // 播放胜利音效
-                this.play_victory_sound();
+                // 使用胜利者的胜利音乐
+                const victoryMusic = data.victory_music || 'royal-vict.mp3';
+                this.play_victory_sound(victoryMusic);
                 
                 // 可选：在游戏状态中显示胜利者信息
                 if (data.winner) {
-                    console.log(`玩家 ${data.winner} 获胜！`);
+                    console.log(`玩家 ${data.winner} 获胜！播放胜利者的胜利音乐: ${victoryMusic}`);
                 }
             }
             
@@ -2289,20 +2498,65 @@
                 this.isMusicPlaying = true;
                 this.update_music_button();
                 
-                // 尝试自动播放音乐（浏览器可能阻止）
-                const playPromise = this.bgMusic.play();
+                // 获取用户音乐设置
+                this.load_user_music_settings().then(() => {
+                    // 尝试自动播放音乐（浏览器可能阻止）
+                    const playPromise = this.bgMusic.play();
+                    
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            // 自动播放成功
+                            this.isMusicPlaying = true;
+                            this.update_music_button();
+                        }).catch(error => {
+                            // 自动播放被阻止，等待用户交互
+                            console.log("自动播放被阻止，需要用户手动点击音乐按钮:", error);
+                            this.isMusicPlaying = false;
+                            this.update_music_button();
+                        });
+                    }
+                });
+            }
+            
+            // 加载用户音乐设置
+            async load_user_music_settings() {
+                if (!this.isLoggedIn) {
+                    // 如果用户未登录，使用默认音乐设置
+                    this.bgMusic.src = "/music/home/Whispers-of-Strategy.mp3";
+                    this.victorySound.src = "/music/vict/royal-vict.mp3";
+                    this.bgMusic.load();
+                    this.victorySound.load();
+                    return;
+                }
                 
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        // 自动播放成功
-                        this.isMusicPlaying = true;
-                        this.update_music_button();
-                    }).catch(error => {
-                        // 自动播放被阻止，等待用户交互
-                        console.log("自动播放被阻止，需要用户手动点击音乐按钮:", error);
-                        this.isMusicPlaying = false;
-                        this.update_music_button();
-                    });
+                try {
+                    const response = await fetch('/api/user/music');
+                    if (response.ok) {
+                        const musicData = await response.json();
+                        const settings = musicData.music_settings || {};
+                        
+                        // 更新背景音乐
+                        const bgm = settings.selected_bgm || 'Whispers-of-Strategy.mp3';
+                        this.bgMusic.src = `/music/home/${bgm}`;
+                        this.bgMusic.load();
+                        
+                        // 更新胜利音乐
+                        const victoryMusic = settings.selected_victory || 'royal-vict.mp3';
+                        this.victorySound.src = `/music/vict/${victoryMusic}`;
+                        this.victorySound.load();
+                    } else {
+                        console.error('获取用户音乐设置失败，使用默认设置');
+                        this.bgMusic.src = "/music/home/Whispers-of-Strategy.mp3";
+                        this.victorySound.src = "/music/vict/royal-vict.mp3";
+                        this.bgMusic.load();
+                        this.victorySound.load();
+                    }
+                } catch (error) {
+                    console.error('加载用户音乐设置失败:', error);
+                    this.bgMusic.src = "/music/home/Whispers-of-Strategy.mp3";
+                    this.victorySound.src = "/music/vict/royal-vict.mp3";
+                    this.bgMusic.load();
+                    this.victorySound.load();
                 }
             }
             
@@ -2340,14 +2594,24 @@
             }
             
             // 播放胜利音效
-            play_victory_sound() {
+            play_victory_sound(victoryMusicFile = null) {
                 console.log("开始播放胜利音效");
+                
+                // 如果指定了胜利音乐文件，则更新音效源
+                if (victoryMusicFile) {
+                    console.log(`使用指定的胜利音乐: ${victoryMusicFile}`);
+                    this.victorySound.src = `/music/vict/${victoryMusicFile}`;
+                    // 重置音效状态
+                    this.victorySound.load();
+                }
+                
                 console.log("胜利音效当前状态:", {
                     readyState: this.victorySound.readyState,
                     currentTime: this.victorySound.currentTime,
                     paused: this.victorySound.paused,
                     ended: this.victorySound.ended,
-                    error: this.victorySound.error
+                    error: this.victorySound.error,
+                    src: this.victorySound.src
                 });
                 
                 // 记录背景音乐是否在播放
@@ -2428,6 +2692,172 @@
                         console.error("胜利音效播放失败:", error);
                         console.error("胜利音效错误详情:", this.victorySound.error);
                     });
+                }
+            }
+            
+            // 显示用户信息统计弹窗
+            async show_user_stats() {
+                if (!this.isLoggedIn) {
+                    document.getElementById("gameStatus").textContent = "请先登录后再查看用户统计";
+                    return;
+                }
+                
+                try {
+                    // 获取用户统计数据
+                    const statsResponse = await fetch('/api/user/stats');
+                    if (statsResponse.ok) {
+                        const statsData = await statsResponse.json();
+                        this.update_user_stats_display(statsData);
+                    } else {
+                        console.error('获取用户统计数据失败');
+                        document.getElementById("gameStatus").textContent = "获取用户统计数据失败";
+                        return;
+                    }
+                    
+                    // 获取用户游戏历史
+                    const historyResponse = await fetch('/api/user/history?limit=10');
+                    if (historyResponse.ok) {
+                        const historyData = await historyResponse.json();
+                        this.update_game_history_display(historyData.history || []);
+                    } else {
+                        console.error('获取用户游戏历史失败');
+                        this.update_game_history_display([]);
+                    }
+                    
+                    // 获取用户音乐设置
+                    const musicResponse = await fetch('/api/user/music');
+                    if (musicResponse.ok) {
+                        const musicData = await musicResponse.json();
+                        this.update_music_settings_display(musicData);
+                    } else {
+                        console.error('获取用户音乐设置失败');
+                    }
+                    
+                    // 显示弹窗
+                    document.getElementById('userStatsModal').style.display = 'flex';
+                } catch (error) {
+                    console.error('获取用户信息失败:', error);
+                    document.getElementById("gameStatus").textContent = "获取用户信息失败";
+                }
+            }
+            
+            // 关闭用户信息统计弹窗
+            close_user_stats() {
+                document.getElementById('userStatsModal').style.display = 'none';
+            }
+            
+            // 更新用户统计数据显示
+            update_user_stats_display(statsData) {
+                // 更新用户名
+                document.getElementById('statsUsername').textContent = this.username;
+                
+                // 更新统计数据
+                document.getElementById('totalGames').textContent = statsData.total_games || 0;
+                document.getElementById('totalWins').textContent = statsData.wins || 0;
+                
+                // 计算胜率
+                const totalGames = statsData.total_games || 0;
+                const totalWins = statsData.wins || 0;
+                const winRate = totalGames > 0 ? Math.round((totalWins / totalGames) * 100) : 0;
+                document.getElementById('winRate').textContent = winRate + '%';
+            }
+            
+            // 更新游戏历史显示
+            update_game_history_display(gameHistory) {
+                const gameHistoryElement = document.getElementById('gameHistory');
+                
+                if (gameHistory.length === 0) {
+                    gameHistoryElement.innerHTML = '<p>暂无游戏记录</p>';
+                    return;
+                }
+                
+                let historyHTML = '';
+                gameHistory.forEach(game => {
+                    const resultClass = game.won ? 'win' : 'lose';
+                    const resultText = game.won ? '胜利' : '失败';
+                    const date = new Date(game.finished_at).toLocaleDateString();
+                    
+                    historyHTML += `
+                        <div class="game-history-item">
+                            <div class="game-info">
+                                <div>房间: ${game.room_id}</div>
+                                <div>${date}</div>
+                                <div>排名: ${game.final_rank}</div>
+                            </div>
+                            <div class="game-result ${resultClass}">${resultText}</div>
+                        </div>
+                    `;
+                });
+                
+                gameHistoryElement.innerHTML = historyHTML;
+            }
+            
+            // 更新音乐设置显示
+            update_music_settings_display(musicData) {
+                // 从后端返回的数据结构中正确获取音乐设置
+                const settings = musicData.music_settings || {};
+                document.getElementById('bgmSelect').value = settings.selected_bgm || 'Whispers-of-Strategy.mp3';
+                document.getElementById('victoryMusicSelect').value = settings.selected_victory || 'royal-vict.mp3';
+            }
+            
+            // 保存音乐设置
+            async save_music_settings() {
+                if (!this.isLoggedIn) {
+                    document.getElementById("gameStatus").textContent = "请先登录后再保存音乐设置";
+                    return;
+                }
+                
+                const bgm = document.getElementById('bgmSelect').value;
+                const victoryMusic = document.getElementById('victoryMusicSelect').value;
+                
+                try {
+                    const response = await fetch('/api/user/music', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            bgm: bgm,
+                            victory_music: victoryMusic
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        document.getElementById("gameStatus").textContent = "音乐设置已保存";
+                        
+                        // 更新当前播放的音乐
+                        this.update_current_music(bgm, victoryMusic);
+                    } else {
+                        const errorData = await response.json();
+                        document.getElementById("gameStatus").textContent = `保存失败: ${errorData.message || '未知错误'}`;
+                    }
+                } catch (error) {
+                    console.error('保存音乐设置失败:', error);
+                    document.getElementById("gameStatus").textContent = "保存音乐设置失败";
+                }
+            }
+            
+            // 更新当前播放的音乐
+            update_current_music(bgm, victoryMusic) {
+                // 更新背景音乐
+                if (this.bgMusic.src !== `/music/home/${bgm}`) {
+                    const wasPlaying = this.isMusicPlaying;
+                    this.bgMusic.src = `/music/home/${bgm}`;
+                    this.bgMusic.load();
+                    
+                    if (wasPlaying) {
+                        this.bgMusic.play().then(() => {
+                            console.log('背景音乐已更新并继续播放');
+                        }).catch(error => {
+                            console.error('更新背景音乐后播放失败:', error);
+                        });
+                    }
+                }
+                
+                // 更新胜利音乐
+                if (this.victorySound.src !== `/music/vict/${victoryMusic}`) {
+                    this.victorySound.src = `/music/vict/${victoryMusic}`;
+                    this.victorySound.load();
                 }
             }
         }

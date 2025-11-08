@@ -1,0 +1,1 @@
+使用cd c:\Users\Lenovo\Documents\GitHub\FlagWars; python run_server.py来启动服务器

@@ -276,6 +276,95 @@ class GameHistoryHandler(BaseHandler):
             })
 
 
+class UserMusicSettingsHandler(BaseHandler):
+    """用户音乐设置处理器"""
+    
+    async def get(self):
+        """获取用户音乐设置"""
+        try:
+            user = self.get_current_user()
+            if not user:
+                self.write_json({
+                    'success': False,
+                    'message': '请先登录'
+                })
+                return
+            
+            # 获取用户音乐设置
+            music_settings = db.get_user_music_settings(user['id'])
+            
+            # 获取所有可用音乐
+            available_music = db.get_available_music()
+            
+            self.write_json({
+                'success': True,
+                'music_settings': music_settings,
+                'available_music': available_music
+            })
+            
+        except Exception as e:
+            logging.error(f"获取用户音乐设置错误: {str(e)}")
+            self.write_json({
+                'success': False,
+                'message': '获取音乐设置失败，请稍后再试'
+            })
+    
+    async def post(self):
+        """更新用户音乐设置"""
+        try:
+            user = self.get_current_user()
+            if not user:
+                self.write_json({
+                    'success': False,
+                    'message': '请先登录'
+                })
+                return
+            
+            data = json.loads(self.request.body.decode())
+            bgm_name = data.get('bgm')  # 修改为bgm，与前端匹配
+            victory_music_name = data.get('victory_music')  # 修改为victory_music，与前端匹配
+            
+            # 获取所有可用音乐
+            available_music = db.get_available_music()
+            
+            # 验证背景音乐是否有效
+            if bgm_name and bgm_name not in available_music['bgm']:
+                self.write_json({
+                    'success': False,
+                    'message': '无效的背景音乐选择'
+                })
+                return
+            
+            # 验证胜利音乐是否有效
+            if victory_music_name and victory_music_name not in available_music['victory']:
+                self.write_json({
+                    'success': False,
+                    'message': '无效的胜利音乐选择'
+                })
+                return
+            
+            # 更新用户音乐选择
+            success = db.update_user_music_selection(user['id'], bgm_name, victory_music_name)
+            
+            if success:
+                self.write_json({
+                    'success': True,
+                    'message': '音乐设置已更新'
+                })
+            else:
+                self.write_json({
+                    'success': False,
+                    'message': '更新音乐设置失败，请稍后再试'
+                })
+            
+        except Exception as e:
+            logging.error(f"更新用户音乐设置错误: {str(e)}")
+            self.write_json({
+                'success': False,
+                'message': '更新音乐设置失败，请稍后再试'
+            })
+
+
 # 路由配置
 auth_routes = [
     (r"/api/auth/login", LoginHandler),
@@ -284,4 +373,5 @@ auth_routes = [
     (r"/api/auth/me", CheckAuthHandler),  # 修改为/me，与前端匹配
     (r"/api/user/stats", UserStatsHandler),
     (r"/api/user/history", GameHistoryHandler),
+    (r"/api/user/music", UserMusicSettingsHandler),
 ]

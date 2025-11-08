@@ -564,10 +564,18 @@ class GameManager:
         
         # 发送胜利音效触发消息
         if game_state.winner:
+            # 获取胜利者的胜利音乐偏好
+            victory_music = 'royal-vict.mp3'  # 默认胜利音乐
+            if game_state.winner.id in self.player_user_mapping:
+                winner_user_id = self.player_user_mapping[game_state.winner.id]
+                user_music_settings = db.get_user_music_settings(winner_user_id)
+                victory_music = user_music_settings.get('selected_victory', 'royal-vict.mp3')
+            
             victory_message = {
                 'type': 'play_victory_sound',
                 'winner': game_state.winner.name,
-                'winner_id': game_state.winner.id
+                'winner_id': game_state.winner.id,
+                'victory_music': victory_music
             }
             
             for player_id, handler in self.players[game_id].items():
@@ -733,26 +741,19 @@ class GameManager:
                 if player_id in self.player_user_mapping:
                     user_id = self.player_user_mapping[player_id]
                     
-                    # 计算玩家的游戏统计
-                    soldiers_killed = 0  # 这里需要从游戏状态中获取实际数据
-                    tiles_captured = 0  # 这里需要从游戏状态中获取实际数据
-                    
                     # 获取玩家排名
                     player_stats = game_state.get_player_stats(player_id)
                     final_rank = player_stats.get('rank', len(game_state.players))
                     
                     # 记录游戏参与者信息
                     db.record_game_player(
-                        game_db_id, user_id, final_rank, 
-                        soldiers_killed, tiles_captured, player.is_alive
+                        game_db_id, user_id, final_rank, player.is_alive
                     )
                     
                     # 只在游戏正常结束时更新用户统计
                     if game_state.game_over_type == 'normal':
                         db.update_user_stats(user_id, {
-                            'won': player == game_state.winner,
-                            'soldiers_killed': soldiers_killed,
-                            'tiles_captured': tiles_captured
+                            'won': player == game_state.winner
                         })
             
             logging.info(f"游戏 {game_id} 结果已记录到数据库，结束类型: {game_state.game_over_type}")
@@ -843,6 +844,10 @@ class GameManager:
                 game_duration = int(time.time() - self.game_start_times[game_id])
                 self._record_game_result(game_id, game_state, game_duration)
                 del self.game_start_times[game_id]
+        
+        # 从game_over_games集合中移除游戏ID，以便新游戏可以正常结束并触发胜利音乐
+        if game_id in self.game_over_games:
+            self.game_over_games.remove(game_id)
         
         # 保存当前玩家信息
         current_players = list(self.games[game_id].players.values())
