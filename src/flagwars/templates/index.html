@@ -6,16 +6,30 @@
     <title>FlagWars - 旗帜战争</title>
     <link rel="icon" type="image/x-icon" href="/icons/image.ico">
     <style>
+        :root {
+            /* 新的配色方案 */
+            --primary-100: #FF5733;
+            --primary-200: #ff8a5f;
+            --primary-300: #fff3bf;
+            --accent-100: #2E86AB;
+            --accent-200: #d0ffff;
+            --text-100: #FFFFFF;
+            --text-200: #e0e0e0;
+            --bg-100: #1A1A1A;
+            --bg-200: #292929;
+            --bg-300: #404040;
+        }
+        
         html, body {
             margin: 0;
             padding: 20px;
             font-family: 'Microsoft YaHei', sans-serif;
             min-height: 100vh;
-            color: #333;
+            color: var(--text-100);
         }
         
         body {
-            background-color: #f4f4f4;
+            background-color: var(--bg-100);
             position: relative;
         }
         
@@ -24,14 +38,14 @@
             position: fixed;
             inset: 0;
             background: 
-                /* 深灰虚线层（节奏线） */
-                repeating-linear-gradient(to right, transparent 0 38px, rgba(0, 0, 0, 0.35) 38px 40px, transparent 40px 120px), 
-                repeating-linear-gradient(to bottom, transparent 0 38px, rgba(0, 0, 0, 0.35) 38px 40px, transparent 40px 120px), 
-                /* 浅灰实线层（主网格） */
-                linear-gradient(to right, rgba(0, 0, 0, 0.12) 1px, transparent 1px), 
-                linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 1px, transparent 1px), 
+                /* 深色虚线层（节奏线） */
+                repeating-linear-gradient(to right, transparent 0 38px, rgba(255, 87, 51, 0.2) 38px 40px, transparent 40px 120px), 
+                repeating-linear-gradient(to bottom, transparent 0 38px, rgba(255, 87, 51, 0.2) 38px 40px, transparent 40px 120px), 
+                /* 浅色实线层（主网格） */
+                linear-gradient(to right, rgba(46, 134, 171, 0.15) 1px, transparent 1px), 
+                linear-gradient(to bottom, rgba(46, 134, 171, 0.15) 1px, transparent 1px), 
                 /* 噪声层（纸质质感） */
-                radial-gradient(circle at 25% 25%, rgba(0, 0, 0, 0.02) 1%, transparent 1%) repeat;
+                radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 1%, transparent 1%) repeat;
             background-size: 
                 120px 120px,   /* 虚线节奏水平 */
                 120px 120px,   /* 虚线节奏垂直 */
@@ -47,7 +61,7 @@
             position: absolute;
             width: 6px;
             height: 6px;
-            background-color: rgba(0, 0, 0, 0.45);
+            background-color: var(--primary-200);
             z-index: -1;
         }
         
@@ -60,11 +74,12 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(26, 26, 26, 0.85);
             backdrop-filter: blur(5px);
             border-radius: 15px;
             padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--bg-300);
         }
         
         .header {
@@ -76,11 +91,17 @@
         .header h1 {
             font-size: 3em;
             margin: 0;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 15px;
+            color: var(--text-100);
+            background: var(--bg-300);
+            padding: 15px 30px;
+            border-radius: 15px;
+            border: 1px solid var(--bg-200);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         
         .header h1 .logo {
@@ -96,14 +117,15 @@
         .header .subtitle {
             font-size: 1.2em;
             opacity: 0.9;
+            color: var(--text-200);
         }
         
         .tutorial-btn {
             position: absolute;
             top: 0;
             right: 0;
-            background: rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(0, 0, 0, 0.2);
+            background: var(--accent-100);
+            border: 2px solid var(--accent-200);
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -114,12 +136,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #333;
+            color: var(--text-100);
+            text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
         
         .tutorial-btn:hover {
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--accent-200);
             transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
         }
         
         .game-area {
@@ -129,51 +154,55 @@
         }
         
         .game-tick-container {
-            background: rgba(0, 0, 0, 0.1);
+            background: var(--bg-200);
             border-radius: 10px 10px 0 0;
             padding: 15px 20px;
             text-align: center;
             margin-bottom: 10px;
+            border: 1px solid var(--bg-300);
         }
         
         .game-tick {
             font-size: 1.5em;
             font-weight: bold;
-            color: #FFD700;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            color: var(--primary-300);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
         }
         
         .game-canvas-container {
             flex: 3;
-            background: rgba(0, 0, 0, 0.1);
+            background: var(--bg-200);
             border-radius: 10px;
             padding: 20px;
+            border: 1px solid var(--bg-300);
         }
         
         #gameCanvas {
-            background: #2c3e50;
+            background: var(--bg-100);
             border-radius: 8px;
             display: block;
             margin: 0 auto;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--bg-300);
         }
         
         .game-info {
             flex: 1;
-            background: rgba(0, 0, 0, 0.1);
+            background: var(--bg-200);
             border-radius: 10px;
             padding: 20px;
+            border: 1px solid var(--bg-300);
         }
         
         .player-setup {
-            background: rgba(0, 0, 0, 0.05);
+            background: var(--bg-300);
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 20px;
         }
         
         .controls {
-            background: rgba(0, 0, 0, 0.05);
+            background: var(--bg-300);
             border-radius: 10px;
             padding: 20px;
         }
@@ -181,21 +210,47 @@
         input, button {
             padding: 10px;
             margin: 5px 0;
-            border: none;
+            border: 1px solid var(--bg-300);
             border-radius: 5px;
             width: 100%;
             box-sizing: border-box;
         }
         
+        input {
+            background: var(--bg-200);
+            color: var(--text-100);
+        }
+        
         button {
-            background: #4CAF50;
-            color: white;
+            background: var(--primary-100);
+            color: var(--text-100);
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s;
+            font-weight: bold;
+            border: 2px solid var(--primary-200);
+            text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
         
         button:hover {
-            background: #45a049;
+            background: var(--primary-200);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            border-color: var(--primary-300);
+        }
+        
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:disabled {
+            background: var(--bg-300);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            border-color: var(--bg-200);
+            opacity: 0.6;
         }
         
         button:disabled {
@@ -207,8 +262,9 @@
             margin-top: 10px;
             padding: 10px;
             border-radius: 5px;
-            background: rgba(0, 0, 0, 0.05);
-            color: #333;
+            background: var(--bg-200);
+            color: var(--text-200);
+            border: 1px solid var(--bg-300);
         }
         
         .terrain-legend {
@@ -219,7 +275,7 @@
         }
         
         .player-list {
-            background: rgba(0, 0, 0, 0.05);
+            background: var(--bg-300);
             border-radius: 10px;
             padding: 20px;
             margin-top: 20px;
@@ -231,12 +287,14 @@
             justify-content: space-between;
             padding: 8px;
             margin: 5px 0;
-            background: rgba(0, 0, 0, 0.05);
+            background: var(--bg-200);
             border-radius: 5px;
+            border: 1px solid var(--bg-300);
         }
         
         .player-name {
             font-weight: bold;
+            color: var(--text-100);
         }
         
         .player-status {
@@ -255,7 +313,7 @@
         }
         
         .leaderboard {
-            background: rgba(0, 0, 0, 0.05);
+            background: var(--bg-300);
             border-radius: 10px;
             padding: 20px;
             margin-top: 20px;
@@ -267,25 +325,29 @@
             justify-content: space-between;
             padding: 8px;
             margin: 5px 0;
-            background: rgba(0, 0, 0, 0.05);
+            background: var(--bg-200);
             border-radius: 5px;
+            border: 1px solid var(--bg-300);
         }
         
         .leaderboard-rank {
             font-weight: bold;
             margin-right: 10px;
             min-width: 25px;
+            color: var(--text-100);
         }
         
         .leaderboard-name {
             flex-grow: 1;
             font-weight: bold;
+            color: var(--text-100);
         }
         
         .leaderboard-stats {
             display: flex;
             gap: 15px;
             font-size: 0.9em;
+            color: var(--text-200);
         }
         
         .leaderboard-stat {
@@ -318,6 +380,7 @@
             align-items: center;
             gap: 10px;
             font-size: 0.9em;
+            color: var(--text-200);
         }
         
         .legend-color {
@@ -335,12 +398,12 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
+            background-color: rgba(0, 0, 0, 0.8);
             overflow: auto;
         }
         
         .tutorial-content {
-            background: rgba(255, 255, 255, 0.95);
+            background: var(--bg-200);
             margin: 5% auto;
             padding: 30px;
             border-radius: 15px;
@@ -348,8 +411,9 @@
             max-width: 800px;
             max-height: 80vh;
             overflow-y: auto;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            color: #333;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            color: var(--text-100);
+            border: 1px solid var(--bg-300);
         }
         
         .tutorial-header {
@@ -357,17 +421,18 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid var(--bg-300);
             padding-bottom: 15px;
         }
         
         .tutorial-title {
             font-size: 2em;
             margin: 0;
+            color: var(--text-100);
         }
         
         .tutorial-close {
-            color: #333;
+            color: var(--text-100);
             font-size: 28px;
             font-weight: bold;
             cursor: pointer;
@@ -375,11 +440,20 @@
             border: none;
             padding: 0;
             width: auto;
-            transition: 0.3s;
+            transition: all 0.3s;
+            text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
         }
         
         .tutorial-close:hover {
-            opacity: 0.7;
+            color: var(--accent-200);
+            background: rgba(46, 134, 171, 0.2);
+            transform: scale(1.1);
         }
         
         .tutorial-section {
@@ -387,7 +461,7 @@
         }
         
         .tutorial-section h3 {
-            color: #667eea;
+            color: var(--accent-100);
             margin-top: 0;
             margin-bottom: 15px;
         }
@@ -401,11 +475,16 @@
         .terrain-table th, .terrain-table td {
             padding: 10px;
             text-align: left;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid var(--bg-300);
         }
         
         .terrain-table th {
-            background: rgba(0, 0, 0, 0.05);
+            background: var(--bg-300);
+            color: var(--text-100);
+        }
+        
+        .terrain-table td {
+            color: var(--text-200);
         }
         
         .terrain-icon {
@@ -414,7 +493,7 @@
         }
         
         .quick-tips {
-            background: rgba(0, 0, 0, 0.05);
+            background: var(--bg-300);
             border-radius: 10px;
             padding: 15px;
             margin-top: 15px;
@@ -422,12 +501,13 @@
         
         .quick-tips h4 {
             margin-top: 0;
-            color: #667eea;
+            color: var(--accent-100);
         }
         
         .quick-tips ul {
             margin: 10px 0;
             padding-left: 20px;
+            color: var(--text-200);
         }
         
         .quick-tips li {
@@ -443,17 +523,35 @@
         .tutorial-nav button {
             width: auto;
             padding: 10px 20px;
-            background: rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            color: #333;
+            background: var(--accent-100);
+            border: 2px solid var(--accent-200);
+            color: var(--text-100);
+            font-weight: bold;
+            text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
         
         .tutorial-nav button:hover {
-            background: rgba(0, 0, 0, 0.1);
+            background: var(--accent-200);
+            border-color: var(--primary-300);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
         }
         
         .tutorial-nav .next {
             margin-left: auto;
+        }
+        
+        h3, h4 {
+            color: var(--text-100);
+        }
+        
+        .room-info {
+            background: var(--bg-300);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--bg-300);
         }
     </style>
 </head>

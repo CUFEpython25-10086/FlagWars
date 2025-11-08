@@ -721,11 +721,18 @@ def make_app():
 
 def main():
     """主函数"""
+    import argparse
+    
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(description='FlagWars游戏服务器')
+    parser.add_argument('--port', type=int, default=8888, help='服务器监听端口 (默认: 8888)')
+    args = parser.parse_args()
+    
     logging.basicConfig(level=logging.INFO)
     
     app = make_app()
     server = httpserver.HTTPServer(app)
-    server.listen(8888, address='0.0.0.0')
+    server.listen(args.port, address='0.0.0.0')
     
     # 获取本机IP地址
     import socket
@@ -738,8 +745,8 @@ def main():
     except:
         local_ip = "未知"
     
-    logging.info("FlagWars服务器启动在 http://localhost:8888")
-    logging.info(f"局域网访问地址: http://{local_ip}:8888")
+    logging.info(f"FlagWars服务器启动在 http://localhost:{args.port}")
+    logging.info(f"局域网访问地址: http://{local_ip}:{args.port}")
     logging.info("按 Ctrl+C 停止服务器")
     
     try:
