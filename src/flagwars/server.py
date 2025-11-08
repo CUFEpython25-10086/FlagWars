@@ -716,6 +716,7 @@ def make_app():
         (r"/ws", GameWebSocketHandler, {"game_manager": game_manager}),
         (r"/static/(.*)", web.StaticFileHandler, {"path": os.path.join(project_root, "static")}),
         (r"/icons/(.*)", web.StaticFileHandler, {"path": os.path.join(project_root, "icons")}),
+        (r"/music/(.*)", web.StaticFileHandler, {"path": os.path.join(project_root, "music")}),
     ])
 
 

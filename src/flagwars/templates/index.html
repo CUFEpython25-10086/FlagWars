@@ -553,6 +553,39 @@
             margin-bottom: 20px;
             border: 1px solid var(--bg-300);
         }
+        
+        .music-control {
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        .music-btn {
+            background: var(--accent-100);
+            border: 2px solid var(--accent-200);
+            color: var(--text-100);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            width: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .music-btn:hover {
+            background: var(--accent-200);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+        
+        .music-btn.muted {
+            background: var(--bg-300);
+            border-color: var(--bg-200);
+        }
     </style>
 </head>
 <body>
@@ -613,6 +646,10 @@
                 <div class="controls">
                     <h3>游戏控制</h3>
                     <div class="status" id="gameStatus">等待加入游戏...</div>
+                    
+                    <div class="music-control">
+                        <button id="musicToggle" class="music-btn">🔊 音乐开</button>
+                    </div>
                 </div>
                 
                 <div class="player-list">
@@ -765,6 +802,12 @@
         </div>
     </div>
 
+    <!-- 音频元素 -->
+    <audio id="bgMusic" loop>
+        <source src="/music/home/Whispers of Strategy.mp3" type="audio/mpeg">
+        您的浏览器不支持音频元素。
+    </audio>
+
     <script>
         class FlagWarsClient {
             constructor() {
@@ -782,7 +825,13 @@
                 this.canvas_width = 800;
                 this.canvas_height = 600;
                 
+                // 音乐控制
+                this.bgMusic = document.getElementById("bgMusic");
+                this.musicToggle = document.getElementById("musicToggle");
+                this.isMusicPlaying = false;
+                
                 this.setup_event_listeners();
+                this.init_music();
                 this.render();
             }
             
@@ -801,6 +850,9 @@
                 
                 // 准备按钮
                 document.getElementById("readyBtn").addEventListener("click", (e) => this.toggle_ready(e));
+                
+                // 音乐控制按钮
+                this.musicToggle.addEventListener("click", () => this.toggle_music());
                 
                 // 画布点击事件
                 this.canvas.addEventListener("click", (e) => this.handle_canvas_click(e));
@@ -1944,6 +1996,65 @@
                 
                 // 显示房间列表
                 document.getElementById("roomList").style.display = "block";
+            }
+            
+            // 初始化音乐
+            init_music() {
+                // 设置音乐音量
+                this.bgMusic.volume = 0.3;
+                
+                // 初始化音乐状态为开启
+                this.isMusicPlaying = true;
+                this.update_music_button();
+                
+                // 尝试自动播放音乐（浏览器可能阻止）
+                const playPromise = this.bgMusic.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        // 自动播放成功
+                        this.isMusicPlaying = true;
+                        this.update_music_button();
+                    }).catch(error => {
+                        // 自动播放被阻止，等待用户交互
+                        console.log("自动播放被阻止，需要用户手动点击音乐按钮:", error);
+                        this.isMusicPlaying = false;
+                        this.update_music_button();
+                    });
+                }
+            }
+            
+            // 切换音乐播放状态
+            toggle_music() {
+                if (this.isMusicPlaying) {
+                    this.bgMusic.pause();
+                    this.isMusicPlaying = false;
+                    this.update_music_button();
+                } else {
+                    const playPromise = this.bgMusic.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            this.isMusicPlaying = true;
+                            this.update_music_button();
+                        }).catch(error => {
+                            console.error("音乐播放失败:", error);
+                            // 如果播放失败，保持音乐关闭状态
+                            this.isMusicPlaying = false;
+                            this.update_music_button();
+                        });
+                    }
+                }
+            }
+            
+            // 更新音乐按钮状态
+            update_music_button() {
+                if (this.isMusicPlaying) {
+                    this.musicToggle.textContent = "🔊 音乐开";
+                    this.musicToggle.classList.remove("muted");
+                } else {
+                    this.musicToggle.textContent = "🔇 音乐关";
+                    this.musicToggle.classList.add("muted");
+                }
             }
         }
         
