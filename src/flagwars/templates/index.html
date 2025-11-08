@@ -2751,13 +2751,16 @@
                 // 更新用户名
                 document.getElementById('statsUsername').textContent = this.username;
                 
+                // 确保statsData是一个对象，如果不是则使用空对象
+                const stats = statsData.stats || statsData || {};
+                
                 // 更新统计数据
-                document.getElementById('totalGames').textContent = statsData.total_games || 0;
-                document.getElementById('totalWins').textContent = statsData.wins || 0;
+                document.getElementById('totalGames').textContent = stats.total_games || 0;
+                document.getElementById('totalWins').textContent = stats.wins || 0;
                 
                 // 计算胜率
-                const totalGames = statsData.total_games || 0;
-                const totalWins = statsData.wins || 0;
+                const totalGames = stats.total_games || 0;
+                const totalWins = stats.wins || 0;
                 const winRate = totalGames > 0 ? Math.round((totalWins / totalGames) * 100) : 0;
                 document.getElementById('winRate').textContent = winRate + '%';
             }

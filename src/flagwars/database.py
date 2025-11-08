@@ -244,7 +244,7 @@ class Database:
             conn.commit()
             return cursor.rowcount > 0
     
-    def get_user_stats(self, user_id: int) -> Optional[Dict[str, Any]]:
+    def get_user_stats(self, user_id: int) -> Dict[str, Any]:
         """获取用户统计信息"""
         with self.get_connection() as conn:
             conn.row_factory = sqlite3.Row
@@ -253,8 +253,7 @@ class Database:
             cursor.execute(
                 """
                 SELECT 
-                    total_games, wins, losses, 
-                    CASE WHEN total_games > 0 THEN ROUND(wins * 100.0 / total_games, 2) ELSE 0 END AS win_rate
+                    total_games, wins, losses
                 FROM users WHERE id = ?
                 """,
                 (user_id,)
@@ -262,8 +261,31 @@ class Database:
             user = cursor.fetchone()
             
             if user:
-                return dict(user)
-            return None
+                stats = dict(user)
+                # 确保所有字段都存在，如果不存在则使用默认值
+                total_games = stats.get('total_games', 0)
+                wins = stats.get('wins', 0)
+                losses = stats.get('losses', 0)
+                
+                # 计算胜率
+                win_rate = 0
+                if total_games > 0:
+                    win_rate = round(wins * 100.0 / total_games, 2)
+                
+                return {
+                    'total_games': total_games,
+                    'wins': wins,
+                    'losses': losses,
+                    'win_rate': win_rate
+                }
+            
+            # 如果用户不存在，返回默认值
+            return {
+                'total_games': 0,
+                'wins': 0,
+                'losses': 0,
+                'win_rate': 0
+            }
     
     def update_user_stats(self, user_id: int, game_result: Dict[str, Any]):
         """更新用户游戏统计"""
@@ -357,7 +379,7 @@ class Database:
                 SELECT 
                     g.id, g.room_id, g.winner_id, g.game_duration, g.total_turns, 
                     g.created_at, g.finished_at,
-                    gp.final_rank, gp.soldiers_killed, gp.tiles_captured, gp.survived,
+                    gp.final_rank, gp.survived,
                     CASE WHEN g.winner_id = ? THEN 1 ELSE 0 END AS won
                 FROM games g
                 JOIN game_players gp ON g.id = gp.game_id
