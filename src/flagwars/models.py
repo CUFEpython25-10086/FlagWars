@@ -113,38 +113,62 @@ class GameState:
         import random
         
         # 生成一些塔楼 - 增加到8个
-        for _ in range(8):
+        towers_placed = 0
+        max_attempts = 100  # 最大尝试次数，防止无限循环
+        while towers_placed < 8 and max_attempts > 0:
+            max_attempts -= 1
             x = random.randint(2, self.map_width - 3)
             y = random.randint(2, self.map_height - 3)
-            self.tiles[y][x].terrain_type = TerrainType.TOWER
-            self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
-            # 初始化中立地块的士兵数量
-            self.tiles[y][x].soldiers = self.tiles[y][x].required_soldiers
+            # 只有在当前位置是平原时才放置塔楼
+            if self.tiles[y][x].terrain_type == TerrainType.PLAIN:
+                self.tiles[y][x].terrain_type = TerrainType.TOWER
+                self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
+                # 初始化中立地块的士兵数量
+                self.tiles[y][x].soldiers = self.tiles[y][x].required_soldiers
+                towers_placed += 1
         
         # 生成一些城墙
-        for _ in range(10):
+        walls_placed = 0
+        max_attempts = 100
+        while walls_placed < 10 and max_attempts > 0:
+            max_attempts -= 1
             x = random.randint(1, self.map_width - 2)
             y = random.randint(1, self.map_height - 2)
-            self.tiles[y][x].terrain_type = TerrainType.WALL
-            self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
-            # 初始化中立地块的士兵数量
-            self.tiles[y][x].soldiers = self.tiles[y][x].required_soldiers
+            # 只有在当前位置是平原时才放置城墙
+            if self.tiles[y][x].terrain_type == TerrainType.PLAIN:
+                self.tiles[y][x].terrain_type = TerrainType.WALL
+                self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
+                # 初始化中立地块的士兵数量
+                self.tiles[y][x].soldiers = self.tiles[y][x].required_soldiers
+                walls_placed += 1
         
         # 生成一些山脉 - 增加到12个
-        for _ in range(12):
+        mountains_placed = 0
+        max_attempts = 100
+        while mountains_placed < 12 and max_attempts > 0:
+            max_attempts -= 1
             x = random.randint(1, self.map_width - 2)
             y = random.randint(1, self.map_height - 2)
-            self.tiles[y][x].terrain_type = TerrainType.MOUNTAIN
-            self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
-            # 山脉不可占领，不需要士兵
+            # 只有在当前位置是平原时才放置山脉
+            if self.tiles[y][x].terrain_type == TerrainType.PLAIN:
+                self.tiles[y][x].terrain_type = TerrainType.MOUNTAIN
+                self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
+                # 山脉不可占领，不需要士兵
+                mountains_placed += 1
         
         # 生成一些沼泽
-        for _ in range(6):
+        swamps_placed = 0
+        max_attempts = 100
+        while swamps_placed < 6 and max_attempts > 0:
+            max_attempts -= 1
             x = random.randint(1, self.map_width - 2)
             y = random.randint(1, self.map_height - 2)
-            self.tiles[y][x].terrain_type = TerrainType.SWAMP
-            self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
-            # 沼泽无需士兵即可占领，不需要初始化士兵数量
+            # 只有在当前位置是平原时才放置沼泽
+            if self.tiles[y][x].terrain_type == TerrainType.PLAIN:
+                self.tiles[y][x].terrain_type = TerrainType.SWAMP
+                self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
+                # 沼泽无需士兵即可占领，不需要初始化士兵数量
+                swamps_placed += 1
     
     def generate_random_spawn_points(self, num_players: int) -> List[Tuple[int, int]]:
         """生成随机的玩家出生点"""
@@ -182,8 +206,8 @@ class GameState:
     
     def _is_valid_spawn_point(self, x: int, y: int, existing_points: List[Tuple[int, int]], min_distance: int) -> bool:
         """检查指定位置是否适合作为出生点"""
-        # 检查地形是否适合（不能是山脉）
-        if self.tiles[y][x].terrain_type == TerrainType.MOUNTAIN:
+        # 检查地形是否适合（必须是平原）
+        if self.tiles[y][x].terrain_type != TerrainType.PLAIN:
             return False
         
         # 检查与现有出生点的距离
