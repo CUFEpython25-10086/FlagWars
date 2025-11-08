@@ -707,10 +707,15 @@ def make_app():
     """创建Tornado应用"""
     game_manager = GameManager()
     
+    # 获取项目根目录的绝对路径
+    import os
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    
     return web.Application([
         (r"/", MainHandler),
         (r"/ws", GameWebSocketHandler, {"game_manager": game_manager}),
-        (r"/static/(.*)", web.StaticFileHandler, {"path": "static"}),
+        (r"/static/(.*)", web.StaticFileHandler, {"path": os.path.join(project_root, "static")}),
+        (r"/icons/(.*)", web.StaticFileHandler, {"path": os.path.join(project_root, "icons")}),
     ])
 
 
