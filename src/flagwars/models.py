@@ -81,19 +81,21 @@ class Tile:
 
 class GameState:
     """游戏状态类"""
-    def __init__(self, map_width: int = 20, map_height: int = 15):
-        self.map_width = map_width
-        self.map_height = map_height
-        self.tiles: List[List[Tile]] = []
-        self.players: Dict[int, Player] = {}
+    
+    def __init__(self):
+        self.map_width = 20
+        self.map_height = 20
+        self.tiles = []
+        self.players = {}
         self.current_tick = 0
         self.game_over = False
-        self.game_started = False  # 添加游戏开始状态
-        self.winner: Optional[Player] = None
+        self.game_started = False
+        self.winner = None
+        self.pending_moves = {}  # 存储待处理的移动操作
+        self.spawn_points = []  # 存储玩家出生点
+        self.game_over_type = None  # 添加游戏结束类型标记：'normal'（正常结束）或 'abnormal'（非正常结束）
         
-        # 操作日志队列，按玩家ID组织，每个玩家有自己的操作队列
-        self.pending_moves: Dict[int, List[Dict]] = {}
-        
+        # 初始化地图
         self._initialize_map()
     
     def _initialize_map(self):
@@ -451,8 +453,15 @@ class GameState:
         
         if len(alive_players) <= 1:
             self.game_over = True
+            self.game_over_type = 'normal'  # 标记为正常结束
             if alive_players:
                 self.winner = alive_players[0]
+    
+    def set_abnormal_game_over(self):
+        """设置游戏为非正常结束"""
+        self.game_over = True
+        self.game_over_type = 'abnormal'  # 标记为非正常结束
+        self.winner = None
     
     def get_player_stats(self, player_id: int):
         """获取玩家的统计数据（总兵力和占领地块数量）"""

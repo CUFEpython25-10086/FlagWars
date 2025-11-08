@@ -2,10 +2,13 @@
 import json
 import logging
 import asyncio
+import time
 from typing import Dict, Set
 from tornado import web, websocket, ioloop, httpserver
 
 from .models import GameState, Player, TerrainType
+from .database import db
+from .auth import BaseHandler, auth_routes
 
 
 class GameWebSocketHandler(websocket.WebSocketHandler):
@@ -15,10 +18,23 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
         self.game_manager = game_manager
         self.player_id = None
         self.game_id = None
+        self.user_id = None  # 添加用户ID
     
     def open(self):
         """WebSocket连接建立"""
         logging.info("WebSocket连接建立")
+        
+        # 检查会话令牌
+        session_token = self.get_cookie("session_token")
+        if session_token:
+            user = db.verify_session(session_token)
+            if user:
+                self.user_id = user['id']
+                logging.info(f"用户 {user['username']} (ID: {user['id']}) 已连接")
+            else:
+                logging.warning("无效的会话令牌")
+        else:
+            logging.info("匿名用户连接")
     
     def on_message(self, message):
         """处理客户端消息"""
@@ -51,11 +67,17 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
         """处理创建房间请求"""
         player_name = data.get('player_name', '玩家')
         
+        # 如果用户已登录，使用用户名
+        if self.user_id:
+            user = db.verify_session(self.get_cookie("session_token"))
+            if user:
+                player_name = user['username']
+        
         # 创建新房间
         room_id = self.game_manager.create_room()
         
         # 加入房间
-        game_id, player_id, error = self.game_manager.join_room(room_id, player_name)
+        game_id, player_id, error = self.game_manager.join_room(room_id, player_name, self.user_id)
         
         if error:
             response = {
@@ -92,8 +114,14 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
             self.close()
             return
         
+        # 如果用户已登录，使用用户名
+        if self.user_id:
+            user = db.verify_session(self.get_cookie("session_token"))
+            if user:
+                player_name = user['username']
+        
         # 加入房间
-        game_id, player_id, error = self.game_manager.join_room(room_id, player_name)
+        game_id, player_id, error = self.game_manager.join_room(room_id, player_name, self.user_id)
         
         if error:
             response = {
@@ -261,6 +289,8 @@ class GameManager:
         self.players: Dict[str, Dict[int, GameWebSocketHandler]] = {}
         self.connections: Dict[str, Dict[int, GameWebSocketHandler]] = {}  # 修复：添加connections属性
         self.player_ready_states: Dict[str, Dict[int, bool]] = {}  # 玩家准备状态
+        self.player_user_mapping: Dict[int, int] = {}  # 玩家ID与用户ID的映射
+        self.game_start_times: Dict[str, float] = {}  # 游戏开始时间
         self.next_player_id = 1
         self.next_room_id = 1000  # 房间ID从1000开始
         self.available_room_ids = set()  # 已释放的房间号集合
@@ -285,7 +315,7 @@ class GameManager:
         async def game_loop():
             while True:
                 await asyncio.sleep(0.8)  # 每0.8秒更新一次
-                self.update_all_games()
+                self._update_all_games()
         
         ioloop.IOLoop.current().add_callback(game_loop)
     
@@ -323,7 +353,7 @@ class GameManager:
                 }
         return rooms
     
-    def join_room(self, room_id: str, player_name: str) -> tuple:
+    def join_room(self, room_id: str, player_name: str, user_id: int = None) -> tuple:
         """加入指定房间"""
         # 检查房间是否存在
         if room_id not in self.games:
@@ -353,6 +383,10 @@ class GameManager:
         
         player = Player(player_id, player_name, player_color)
         
+        # 存储用户ID与游戏玩家ID的映射
+        if user_id:
+            self.player_user_mapping[player_id] = user_id
+        
         # 获取游戏状态
         game_state = self.games[room_id]
         
@@ -378,15 +412,15 @@ class GameManager:
         
         return room_id, player_id, None  # 第三个参数为错误信息，None表示成功
     
-    def create_or_join_game(self, player_name: str, room_id: str = None) -> tuple:
+    def create_or_join_game(self, player_name: str, room_id: str = None, user_id: int = None) -> tuple:
         """创建或加入游戏（保持向后兼容）"""
         if room_id:
             # 尝试加入指定房间
-            return self.join_room(room_id, player_name)
+            return self.join_room(room_id, player_name, user_id)
         else:
             # 创建新房间并加入
             new_room_id = self.create_room()
-            return self.join_room(new_room_id, player_name)
+            return self.join_room(new_room_id, player_name, user_id)
 
     def add_player_connection(self, game_id: str, player_id: int, handler):
         """添加玩家连接"""
@@ -423,8 +457,13 @@ class GameManager:
         # 如果至少有2个玩家、所有玩家都准备且游戏未开始，则开始游戏
         if total_players >= 2 and all_players_ready and game_id in self.games and not self.games[game_id].game_started:
             self.games[game_id].game_started = True
+            # 记录游戏开始时间
+            import time
+            self.game_start_times[game_id] = time.time()
             # 游戏开始时初始化战争迷雾
             self.games[game_id].update_fog_of_war()
+            # 广播游戏开始消息
+            self.broadcast_game_start(game_id)
             logging.info(f"游戏 {game_id} 开始!")
             return True
         
@@ -598,16 +637,103 @@ class GameManager:
         
         return state_dict
     
-    def update_all_games(self):
+    def _update_all_games(self):
         """更新所有游戏状态"""
+        current_time = time.time()
+        games_to_remove = []
+        
         for game_id, game_state in self.games.items():
-            # 只在游戏开始且未结束时更新游戏状态
-            if game_state.game_started and not game_state.game_over:
-                game_state.update_game_tick()
+            # 更新游戏逻辑
+            game_state.update()
+            
+            # 检查游戏是否结束
+            if game_state.game_over and game_id not in self.game_over_games:
+                self.game_over_games.add(game_id)
+                
+                # 记录游戏开始时间（如果还没有记录）
+                if game_id not in self.game_start_times:
+                    self.game_start_times[game_id] = current_time
+                
+                # 计算游戏时长
+                game_duration = int(current_time - self.game_start_times[game_id])
+                
+                # 记录游戏结果
+                self._record_game_result(game_id, game_state, game_duration)
+                
+                # 广播游戏结束消息
+                self.broadcast_game_over(game_id)
+                
+                # 30秒后移除游戏
+                games_to_remove.append((game_id, current_time + 30))
+            
+            # 定期广播游戏状态（每秒一次）
+            elif current_time - self.last_broadcast_time.get(game_id, 0) >= 1:
+                self.broadcast_game_state(game_id)
+                self.last_broadcast_time[game_id] = current_time
+        
+        # 移除已经结束的游戏
+        for game_id, remove_time in games_to_remove:
+            if current_time >= remove_time:
+                self.close_room(game_id)
+    
+    def _record_game_result(self, game_id: str, game_state: GameState, game_duration: int):
+        """记录游戏结果到数据库"""
+        try:
+            # 获取胜利者ID
+            winner_user_id = None
+            if game_state.winner and game_state.winner.id in self.player_user_mapping:
+                winner_user_id = self.player_user_mapping[game_state.winner.id]
+            
+            # 记录游戏
+            game_db_id = db.record_game(game_id, winner_user_id, game_duration, game_state.current_tick)
+            
+            # 记录每个玩家的游戏结果
+            for player_id, player in game_state.players.items():
+                if player_id in self.player_user_mapping:
+                    user_id = self.player_user_mapping[player_id]
+                    
+                    # 计算玩家的游戏统计
+                    soldiers_killed = 0  # 这里需要从游戏状态中获取实际数据
+                    tiles_captured = 0  # 这里需要从游戏状态中获取实际数据
+                    
+                    # 获取玩家排名
+                    player_stats = game_state.get_player_stats(player_id)
+                    final_rank = player_stats.get('rank', len(game_state.players))
+                    
+                    # 记录游戏参与者信息
+                    db.record_game_player(
+                        game_db_id, user_id, final_rank, 
+                        soldiers_killed, tiles_captured, player.is_alive
+                    )
+                    
+                    # 只在游戏正常结束时更新用户统计
+                    if game_state.game_over_type == 'normal':
+                        db.update_user_stats(user_id, {
+                            'won': player == game_state.winner,
+                            'soldiers_killed': soldiers_killed,
+                            'tiles_captured': tiles_captured
+                        })
+            
+            logging.info(f"游戏 {game_id} 结果已记录到数据库，结束类型: {game_state.game_over_type}")
+            
+        except Exception as e:
+            logging.error(f"记录游戏结果失败: {str(e)}")
     
     def close_room(self, room_id: str):
         """关闭房间并清理相关资源"""
         if room_id in self.games:
+            # 如果游戏正在进行中但未正常结束，标记为非正常结束
+            game_state = self.games[room_id]
+            if game_state.game_started and not game_state.game_over:
+                game_state.set_abnormal_game_over()
+                
+                # 记录非正常结束的游戏结果
+                if room_id in self.game_start_times:
+                    import time
+                    game_duration = int(time.time() - self.game_start_times[room_id])
+                    self._record_game_result(room_id, game_state, game_duration)
+                    del self.game_start_times[room_id]
+            
             del self.games[room_id]
             logging.info(f"房间 {room_id} 已关闭")
             
@@ -646,7 +772,15 @@ class GameManager:
             if (game_id in self.games and 
                 self.games[game_id].game_started and 
                 len(self.games[game_id].players) < 2):
-                self.games[game_id].game_over = True
+                # 设置为非正常结束
+                self.games[game_id].set_abnormal_game_over()
+                
+                # 记录非正常结束的游戏结果
+                if game_id in self.game_start_times:
+                    import time
+                    game_duration = int(time.time() - self.game_start_times[game_id])
+                    self._record_game_result(game_id, self.games[game_id], game_duration)
+                    del self.game_start_times[game_id]
             
             # 如果房间中没有玩家了，关闭房间
             if game_id in self.games and len(self.games[game_id].players) == 0:
@@ -656,6 +790,18 @@ class GameManager:
         """重置游戏状态，保留玩家但重置游戏地图和状态"""
         if game_id not in self.games:
             return False
+        
+        # 如果游戏正在进行中但未正常结束，标记为非正常结束并记录结果
+        game_state = self.games[game_id]
+        if game_state.game_started and not game_state.game_over:
+            game_state.set_abnormal_game_over()
+            
+            # 记录非正常结束的游戏结果
+            if game_id in self.game_start_times:
+                import time
+                game_duration = int(time.time() - self.game_start_times[game_id])
+                self._record_game_result(game_id, game_state, game_duration)
+                del self.game_start_times[game_id]
         
         # 保存当前玩家信息
         current_players = list(self.games[game_id].players.values())
@@ -703,6 +849,17 @@ class MainHandler(web.RequestHandler):
             self.write(f.read())
 
 
+class LoginHandler(web.RequestHandler):
+    """登录页面处理器"""
+    
+    def get(self):
+        """提供登录页面"""
+        import os
+        template_path = os.path.join(os.path.dirname(__file__), 'templates', 'login.html')
+        with open(template_path, 'r', encoding='utf-8') as f:
+            self.write(f.read())
+
+
 def make_app():
     """创建Tornado应用"""
     game_manager = GameManager()
@@ -711,13 +868,20 @@ def make_app():
     import os
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     
-    return web.Application([
+    # 合并认证路由和游戏路由
+    routes = [
         (r"/", MainHandler),
+        (r"/login", LoginHandler),
         (r"/ws", GameWebSocketHandler, {"game_manager": game_manager}),
         (r"/static/(.*)", web.StaticFileHandler, {"path": os.path.join(project_root, "static")}),
         (r"/icons/(.*)", web.StaticFileHandler, {"path": os.path.join(project_root, "icons")}),
         (r"/music/(.*)", web.StaticFileHandler, {"path": os.path.join(project_root, "music")}),
-    ])
+    ]
+    
+    # 添加认证路由
+    routes.extend(auth_routes)
+    
+    return web.Application(routes)
 
 
 def main():

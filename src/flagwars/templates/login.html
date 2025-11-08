@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlagWars - 登录</title>
+    <link rel="icon" type="image/x-icon" href="/icons/image.ico">
+    <style>
+        :root {
+            /* 新的配色方案 */
+            --primary-100: #FF5733;
+            --primary-200: #ff8a5f;
+            --primary-300: #fff3bf;
+            --accent-100: #2E86AB;
+            --accent-200: #d0ffff;
+            --text-100: #FFFFFF;
+            --text-200: #e0e0e0;
+            --bg-100: #1A1A1A;
+            --bg-200: #292929;
+            --bg-300: #404040;
+        }
+        
+        html, body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Microsoft YaHei', sans-serif;
+            min-height: 100vh;
+            color: var(--text-100);
+        }
+        
+        body {
+            background-color: var(--bg-100);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: 
+                /* 深色虚线层（节奏线） */
+                repeating-linear-gradient(to right, transparent 0 38px, rgba(255, 87, 51, 0.2) 38px 40px, transparent 40px 120px), 
+                repeating-linear-gradient(to bottom, transparent 0 38px, rgba(255, 87, 51, 0.2) 38px 40px, transparent 40px 120px), 
+                /* 浅色实线层（主网格） */
+                linear-gradient(to right, rgba(46, 134, 171, 0.15) 1px, transparent 1px), 
+                linear-gradient(to bottom, rgba(46, 134, 171, 0.15) 1px, transparent 1px), 
+                /* 噪声层（纸质质感） */
+                radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 1%, transparent 1%) repeat;
+            background-size: 
+                120px 120px,   /* 虚线节奏水平 */
+                120px 120px,   /* 虚线节奏垂直 */
+                60px 60px,     /* 实线水平 */
+                60px 60px,     /* 实线垂直 */
+                4px 4px;       /* 噪声纹理 */
+            background-position: center;
+            z-index: -1;
+        }
+        
+        /* 小方块点缀 */
+        .dot {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background-color: var(--primary-200);
+            z-index: -1;
+        }
+        
+        /* 随机分布的小方块 */
+        .dot:nth-child(1) { top: 30%; left: 45%; }
+        .dot:nth-child(2) { top: 55%; left: 60%; }
+        .dot:nth-child(3) { top: 72%; left: 40%; }
+        .dot:nth-child(4) { top: 80%; left: 70%; }
+        
+        .login-container {
+            max-width: 400px;
+            width: 100%;
+            background: rgba(26, 26, 26, 0.85);
+            backdrop-filter: blur(5px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--bg-300);
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            color: var(--text-100);
+            background: var(--bg-300);
+            padding: 15px 30px;
+            border-radius: 15px;
+            border: 1px solid var(--bg-200);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .login-header h1 .logo {
+            height: 1.2em;
+            width: auto;
+        }
+        
+        .login-header h1 .flag-icon {
+            height: 1.2em;
+            width: auto;
+        }
+        
+        .login-header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            color: var(--text-200);
+            margin-top: 10px;
+        }
+        
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--bg-300);
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+            color: var(--text-200);
+        }
+        
+        .tab.active {
+            color: var(--text-100);
+            border-bottom-color: var(--primary-100);
+        }
+        
+        .tab:hover {
+            color: var(--text-100);
+        }
+        
+        .form-container {
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-200);
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--bg-300);
+            border-radius: 5px;
+            background: var(--bg-200);
+            color: var(--text-100);
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-100);
+            box-shadow: 0 0 5px rgba(255, 87, 51, 0.3);
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+        
+        .success-message {
+            color: #2ecc71;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn-primary {
+            background: var(--primary-100);
+            color: var(--text-100);
+            border: 2px solid var(--primary-200);
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-200);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            border-color: var(--primary-300);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn-secondary {
+            background: var(--accent-100);
+            color: var(--text-100);
+            border: 2px solid var(--accent-200);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--accent-200);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            border-color: var(--primary-300);
+        }
+        
+        .user-info {
+            background: var(--bg-200);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid var(--bg-300);
+            text-align: center;
+        }
+        
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--bg-300);
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            color: var(--text-100);
+        }
+        
+        .user-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--text-100);
+            margin-bottom: 5px;
+        }
+        
+        .user-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--primary-200);
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: var(--text-200);
+        }
+    </style>
+</head>
+<body>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    
+    <div class="login-container">
+        <div class="login-header">
+            <h1>
+                <img src="/icons/icc.png" alt="Flag" class="flag-icon">
+                <img src="/icons/slog.png" alt="FlagWars" class="logo">
+            </h1>
+            <div class="subtitle">旗帜战争</div>
+        </div>
+        
+        <div id="userSection" style="display: none;">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">U</div>
+                <div class="user-name" id="userName">用户名</div>
+                <div class="user-stats">
+                    <div class="stat">
+                        <div class="stat-value" id="userGames">0</div>
+                        <div class="stat-label">游戏场次</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="userWins">0</div>
+                        <div class="stat-label">胜利场次</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="userWinRate">0%</div>
+                        <div class="stat-label">胜率</div>
+                    </div>
+                </div>
+            </div>
+            <button id="logoutBtn" class="btn btn-secondary">退出登录</button>
+            <button id="playBtn" class="btn btn-primary">开始游戏</button>
+        </div>
+        
+        <div id="authSection">
+            <div class="tab-container">
+                <div class="tab active" id="loginTab">登录</div>
+                <div class="tab" id="registerTab">注册</div>
+            </div>
+            
+            <div class="form-container">
+                <div id="loginForm">
+                    <div class="form-group">
+                        <label for="loginUsername">用户名</label>
+                        <input type="text" id="loginUsername" placeholder="请输入用户名">
+                        <div class="error-message" id="loginUsernameError"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">密码</label>
+                        <input type="password" id="loginPassword" placeholder="请输入密码">
+                        <div class="error-message" id="loginPasswordError"></div>
+                    </div>
+                    <button id="loginBtn" class="btn btn-primary">登录</button>
+                    <div class="error-message" id="loginError"></div>
+                </div>
+                
+                <div id="registerForm" style="display: none;">
+                    <div class="form-group">
+                        <label for="registerUsername">用户名</label>
+                        <input type="text" id="registerUsername" placeholder="请输入用户名">
+                        <div class="error-message" id="registerUsernameError"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">密码</label>
+                        <input type="password" id="registerPassword" placeholder="请输入密码">
+                        <div class="error-message" id="registerPasswordError"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">确认密码</label>
+                        <input type="password" id="confirmPassword" placeholder="请再次输入密码">
+                        <div class="error-message" id="confirmPasswordError"></div>
+                    </div>
+                    <button id="registerBtn" class="btn btn-primary">注册</button>
+                    <div class="success-message" id="registerSuccess"></div>
+                    <div class="error-message" id="registerError"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const loginTab = document.getElementById('loginTab');
+        const registerTab = document.getElementById('registerTab');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const registerBtn = document.getElementById('registerBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const playBtn = document.getElementById('playBtn');
+        const userSection = document.getElementById('userSection');
+        const authSection = document.getElementById('authSection');
+        
+        // 切换登录/注册标签
+        loginTab.addEventListener('click', () => {
+            loginTab.classList.add('active');
+            registerTab.classList.remove('active');
+            loginForm.style.display = 'block';
+            registerForm.style.display = 'none';
+            clearMessages();
+        });
+        
+        registerTab.addEventListener('click', () => {
+            registerTab.classList.add('active');
+            loginTab.classList.remove('active');
+            registerForm.style.display = 'block';
+            loginForm.style.display = 'none';
+            clearMessages();
+        });
+        
+        // 清除所有消息
+        function clearMessages() {
+            document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+            document.querySelectorAll('.success-message').forEach(el => el.textContent = '');
+        }
+        
+        // 登录功能
+        loginBtn.addEventListener('click', async () => {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            // 基本验证
+            let valid = true;
+            clearMessages();
+            
+            if (!username) {
+                document.getElementById('loginUsernameError').textContent = '请输入用户名';
+                valid = false;
+            }
+            
+            if (!password) {
+                document.getElementById('loginPasswordError').textContent = '请输入密码';
+                valid = false;
+            }
+            
+            if (!valid) return;
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password }),
+                    credentials: 'include'  // 包含cookies
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // 登录成功，显示用户信息
+                    showUserInfo(data.user);
+                } else {
+                    // 登录失败，显示错误信息
+                    document.getElementById('loginError').textContent = data.message || '登录失败';
+                }
+            } catch (error) {
+                console.error('登录错误:', error);
+                document.getElementById('loginError').textContent = '网络错误，请稍后重试';
+            }
+        });
+        
+        // 注册功能
+        registerBtn.addEventListener('click', async () => {
+            const username = document.getElementById('registerUsername').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // 基本验证
+            let valid = true;
+            clearMessages();
+            
+            if (!username) {
+                document.getElementById('registerUsernameError').textContent = '请输入用户名';
+                valid = false;
+            } else if (username.length < 3) {
+                document.getElementById('registerUsernameError').textContent = '用户名至少3个字符';
+                valid = false;
+            }
+            
+            if (!password) {
+                document.getElementById('registerPasswordError').textContent = '请输入密码';
+                valid = false;
+            } else if (password.length < 6) {
+                document.getElementById('registerPasswordError').textContent = '密码至少6个字符';
+                valid = false;
+            }
+            
+            if (password !== confirmPassword) {
+                document.getElementById('confirmPasswordError').textContent = '两次输入的密码不一致';
+                valid = false;
+            }
+            
+            if (!valid) return;
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password }),
+                    credentials: 'include'  // 包含cookies
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 注册成功，显示成功消息并切换到登录
+                    document.getElementById('registerSuccess').textContent = '注册成功！请登录';
+                    setTimeout(() => {
+                        loginTab.click();
+                        document.getElementById('loginUsername').value = username;
+                    }, 1500);
+                } else {
+                    document.getElementById('registerError').textContent = data.message || '注册失败';
+                }
+            } catch (error) {
+                console.error('注册错误:', error);
+                document.getElementById('registerError').textContent = '网络错误，请稍后重试';
+            }
+        });
+        
+        // 退出登录
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                // 显示登录表单
+                authSection.style.display = 'block';
+                userSection.style.display = 'none';
+                
+                // 清空表单
+                document.getElementById('loginUsername').value = '';
+                document.getElementById('loginPassword').value = '';
+            } catch (error) {
+                console.error('退出登录错误:', error);
+            }
+        });
+        
+        // 开始游戏
+        playBtn.addEventListener('click', () => {
+            // 跳转到游戏页面
+            window.location.href = '/';
+        });
+        
+        // 显示用户信息
+        function showUserInfo(user) {
+            // 确保user对象存在
+            if (!user) {
+                console.error('用户信息不存在');
+                return;
+            }
+            
+            // 设置用户头像（使用用户名首字母）
+            document.getElementById('userAvatar').textContent = user.username.charAt(0).toUpperCase();
+            document.getElementById('userName').textContent = user.username;
+            
+            // 处理用户统计数据
+            let gamesPlayed = 0;
+            let gamesWon = 0;
+            
+            // 检查统计数据是否在user对象中直接存在
+            if (user.total_games !== undefined) {
+                gamesPlayed = user.total_games;
+            } 
+            // 检查统计数据是否在stats子对象中
+            else if (user.stats && user.stats.total_games !== undefined) {
+                gamesPlayed = user.stats.total_games;
+            }
+            
+            if (user.wins !== undefined) {
+                gamesWon = user.wins;
+            }
+            else if (user.stats && user.stats.wins !== undefined) {
+                gamesWon = user.stats.wins;
+            }
+            
+            // 设置用户统计
+            document.getElementById('userGames').textContent = gamesPlayed;
+            document.getElementById('userWins').textContent = gamesWon;
+            
+            // 计算胜率
+            const winRate = gamesPlayed > 0 
+                ? Math.round((gamesWon / gamesPlayed) * 100) 
+                : 0;
+            document.getElementById('userWinRate').textContent = winRate + '%';
+            
+            // 显示用户区域，隐藏认证区域
+            authSection.style.display = 'none';
+            userSection.style.display = 'block';
+        }
+        
+        // 检查用户是否已登录
+        async function checkLoginStatus() {
+            try {
+                const response = await fetch('/api/auth/me', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.authenticated && data.user) {
+                        showUserInfo(data.user);
+                    }
+                }
+            } catch (error) {
+                console.error('检查登录状态错误:', error);
+            }
+        }
+        
+        // 页面加载时检查登录状态
+        checkLoginStatus();
+    </script>
+</body>
+</html>

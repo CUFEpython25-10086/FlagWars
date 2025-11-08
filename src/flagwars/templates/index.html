@@ -586,6 +586,72 @@
             background: var(--bg-300);
             border-color: var(--bg-200);
         }
+        
+        /* 用户信息样式 */
+        .user-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: var(--bg-300);
+            border-radius: 8px;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid var(--bg-200);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .user-name {
+            font-weight: bold;
+            color: var(--primary-200);
+        }
+        
+        .btn-small {
+            background: var(--accent-100);
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            color: var(--text-100);
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+        
+        .btn-small:hover {
+            background: var(--accent-200);
+            transform: translateY(-1px);
+        }
+        
+        .login-prompt {
+            background: var(--bg-300);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid var(--bg-200);
+            text-align: center;
+        }
+        
+        .login-prompt p {
+            margin: 0 0 10px 0;
+            color: var(--text-200);
+        }
+        
+        .login-btn {
+            background: var(--primary-100);
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            color: var(--text-100);
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .login-btn:hover {
+            background: var(--primary-200);
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body>
@@ -596,6 +662,12 @@
     
     <div class="container">
         <div class="header">
+            <!-- 用户信息区域 -->
+            <div class="user-info" id="userInfo" style="display: none;">
+                <span class="user-name" id="userDisplay">用户名</span>
+                <button class="btn-small" id="logoutBtn">退出登录</button>
+            </div>
+            
             <h1>
                 <img src="/icons/icc.png" alt="Flag" class="flag-icon">
                 <img src="/icons/slog.png" alt="FlagWars" class="logo">
@@ -618,8 +690,13 @@
                 </div>
                 
                 <div class="player-setup">
+                    <!-- 登录提示 -->
+                    <div class="login-prompt" id="loginPrompt">
+                        <p>登录账号以保存游戏进度和统计数据</p>
+                        <button class="login-btn" id="loginBtn">登录/注册</button>
+                    </div>
+                    
                     <h3>玩家设置</h3>
-                    <input type="text" id="playerName" placeholder="输入玩家名称" value="Player">
                     
                     <div id="roomControls">
                         <button id="createRoom">创建房间</button>
@@ -818,6 +895,10 @@
                 this.selected_tile = null;
                 this.pending_selected_tile = null; // 初始化待处理的选中位置
                 
+                // 用户登录状态
+                this.isLoggedIn = false;
+                this.username = null;
+                
                 this.canvas = document.getElementById("gameCanvas");
                 this.ctx = this.canvas.getContext("2d");
                 
@@ -829,6 +910,9 @@
                 this.bgMusic = document.getElementById("bgMusic");
                 this.musicToggle = document.getElementById("musicToggle");
                 this.isMusicPlaying = false;
+                
+                // 检查用户登录状态
+                this.check_login_status();
                 
                 this.setup_event_listeners();
                 this.init_music();
@@ -854,6 +938,12 @@
                 // 音乐控制按钮
                 this.musicToggle.addEventListener("click", () => this.toggle_music());
                 
+                // 登录按钮
+                document.getElementById("loginBtn").addEventListener("click", () => this.go_to_login());
+                
+                // 退出登录按钮
+                document.getElementById("logoutBtn").addEventListener("click", () => this.logout());
+                
                 // 画布点击事件
                 this.canvas.addEventListener("click", (e) => this.handle_canvas_click(e));
                 
@@ -861,7 +951,95 @@
                 document.addEventListener("keydown", (e) => this.handle_keyboard(e));
             }
             
+            // 检查用户登录状态
+            async check_login_status() {
+                try {
+                    const response = await fetch('/api/auth/me');
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.authenticated) {
+                            this.isLoggedIn = true;
+                            this.username = data.user.username;
+                            this.update_ui_for_logged_in_user();
+                        } else {
+                            this.update_ui_for_logged_out_user();
+                        }
+                    } else {
+                        this.update_ui_for_logged_out_user();
+                    }
+                } catch (error) {
+                    console.error('检查登录状态失败:', error);
+                    this.update_ui_for_logged_out_user();
+                }
+            }
+            
+            // 更新已登录用户的UI
+            update_ui_for_logged_in_user() {
+                // 显示用户信息区域
+                document.getElementById('userInfo').style.display = 'flex';
+                document.getElementById('userDisplay').textContent = this.username;
+                
+                // 修改登录提示区域显示用户信息
+                document.getElementById('loginPrompt').style.display = 'block';
+                document.getElementById('loginPrompt').innerHTML = `欢迎回来，<strong>${this.username}</strong>！`;
+                
+                // 启用房间创建和加入按钮
+                document.getElementById('createRoom').disabled = false;
+                document.getElementById('joinRoom').disabled = false;
+            }
+            
+            // 更新未登录用户的UI
+            update_ui_for_logged_out_user() {
+                // 隐藏用户信息区域
+                document.getElementById('userInfo').style.display = 'none';
+                
+                // 显示登录提示，并恢复原始内容
+                const loginPrompt = document.getElementById('loginPrompt');
+                loginPrompt.style.display = 'block';
+                loginPrompt.innerHTML = '<p>登录账号以保存游戏进度和统计数据</p><button class="login-btn" id="loginBtn">登录/注册</button>';
+                
+                // 重新绑定登录按钮事件
+                document.getElementById("loginBtn").addEventListener("click", () => this.go_to_login());
+                
+                // 禁用房间创建和加入按钮
+                document.getElementById('createRoom').disabled = true;
+                document.getElementById('joinRoom').disabled = true;
+            }
+            
+            // 跳转到登录页面
+            go_to_login() {
+                window.location.href = '/login';
+            }
+            
+            // 退出登录
+            async logout() {
+                try {
+                    const response = await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        this.isLoggedIn = false;
+                        this.username = null;
+                        this.update_ui_for_logged_out_user();
+                    } else {
+                        console.error('退出登录失败');
+                    }
+                } catch (error) {
+                    console.error('退出登录请求失败:', error);
+                }
+            }
+            
             join_game(event) {
+                // 检查用户是否已登录
+                if (!this.isLoggedIn) {
+                    document.getElementById("gameStatus").textContent = "请先登录后再加入游戏";
+                    return;
+                }
+                
                 // 如果已经连接或已加入游戏，则不执行任何操作
                 if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
                     if (this.player_id) {
@@ -872,8 +1050,6 @@
                     return;
                 }
                 
-                const player_name = document.getElementById("playerName").value;
-                
                 // 创建WebSocket连接
                 const ws_protocol = window.location.protocol === "https:" ? "wss" : "ws";
                 const ws_url = `${ws_protocol}://${window.location.host}/ws`;
@@ -881,7 +1057,7 @@
                 try {
                     this.ws = new WebSocket(ws_url);
                     
-                    this.ws.onopen = (e) => this.on_ws_open(player_name);
+                    this.ws.onopen = (e) => this.on_ws_open(this.username);
                     this.ws.onmessage = (e) => this.on_ws_message(e);
                     this.ws.onclose = (e) => this.on_ws_close(e);
                     this.ws.onerror = (e) => this.on_ws_error(e);
@@ -995,9 +1171,6 @@
                 this.selected_tile = null;
                 this.pending_selected_tile = null; // 重置待处理的选中位置
                 
-                // 重新启用用户名输入框
-                document.getElementById("playerName").disabled = false;
-                
                 // 显示房间控件
                 document.getElementById("roomControls").style.display = "block";
                 document.getElementById("roomList").style.display = "none";
@@ -1061,6 +1234,12 @@
             }
             
             toggle_ready(event) {
+                // 检查用户是否已登录
+                if (!this.isLoggedIn) {
+                    document.getElementById("gameStatus").textContent = "请先登录后再准备游戏";
+                    return;
+                }
+                
                 if (!this.ws) {
                     document.getElementById("gameStatus").textContent = "请先连接服务器";
                     return;
@@ -1161,6 +1340,9 @@
                 document.getElementById("readyBtn").textContent = "准备";
                 document.getElementById("readyBtn").style.backgroundColor = "#ff6b6b";
                 document.getElementById("readyBtn").disabled = false;  // 重置准备按钮为可点击状态
+                
+                // 游戏重置后隐藏排行榜
+                document.getElementById("leaderboardContainer").style.display = "none";
             }
             
             // 处理再来一局成功
@@ -1181,9 +1363,6 @@
                 this.game_state = null;
                 this.selected_tile = null;
                 this.pending_selected_tile = null; // 重置待处理的选中位置
-                
-                // 重新启用用户名输入框
-                document.getElementById("playerName").disabled = false;
                 
                 // 显示房间控件
                 document.getElementById("roomControls").style.display = "block";
@@ -1207,6 +1386,12 @@
             }
             
             handle_canvas_click(event) {
+                // 检查用户是否已登录
+                if (!this.isLoggedIn) {
+                    document.getElementById("gameStatus").textContent = "请先登录后再进行游戏操作";
+                    return;
+                }
+                
                 if (!this.game_state) return;
                 
                 // 如果游戏结束，检查是否点击了"再来一局"按钮
@@ -1278,6 +1463,12 @@
             }
             
             handle_keyboard(event) {
+                // 检查用户是否已登录
+                if (!this.isLoggedIn) {
+                    document.getElementById("gameStatus").textContent = "请先登录后再进行游戏操作";
+                    return;
+                }
+                
                 if (!this.game_state || !this.selected_tile) return;
                 
                 // 检查当前玩家是否为旁观者
@@ -1322,6 +1513,12 @@
             }
             
             move_soldiers_to(to_x, to_y) {
+                // 检查用户是否已登录
+                if (!this.isLoggedIn) {
+                    document.getElementById("gameStatus").textContent = "请先登录后再进行游戏操作";
+                    return;
+                }
+                
                 if (!this.selected_tile || !this.game_state) return;
                 
                 const [from_x, from_y] = this.selected_tile;
@@ -1788,6 +1985,12 @@
             
             // 创建房间
             create_room(event) {
+                // 检查用户是否已登录
+                if (!this.isLoggedIn) {
+                    document.getElementById("gameStatus").textContent = "请先登录后再创建房间";
+                    return;
+                }
+                
                 // 如果已经连接或已加入游戏，则不执行任何操作
                 if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
                     if (this.player_id) {
@@ -1797,8 +2000,6 @@
                     }
                     return;
                 }
-                
-                const player_name = document.getElementById("playerName").value;
                 
                 // 创建WebSocket连接
                 const ws_protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -1813,7 +2014,7 @@
                         // 发送创建房间消息，不包含颜色参数，由服务器分配
                         const create_room_message = {
                             "type": "create_room",
-                            "player_name": player_name
+                            "player_name": this.username
                         };
                         this.ws.send(JSON.stringify(create_room_message));
                     };
@@ -1831,6 +2032,12 @@
             
             // 显示加入房间输入框
             show_join_room_input(event) {
+                // 检查用户是否已登录
+                if (!this.isLoggedIn) {
+                    document.getElementById("gameStatus").textContent = "请先登录后再加入房间";
+                    return;
+                }
+                
                 // 显示房间ID输入框和确认按钮
                 document.getElementById("roomId").style.display = "block";
                 document.getElementById("confirmJoinRoom").style.display = "block";
@@ -1841,6 +2048,12 @@
             
             // 加入指定房间
             join_specific_room(event) {
+                // 检查用户是否已登录
+                if (!this.isLoggedIn) {
+                    document.getElementById("gameStatus").textContent = "请先登录后再加入房间";
+                    return;
+                }
+                
                 const room_id = document.getElementById("roomId").value;
                 
                 if (!room_id) {
@@ -1858,8 +2071,6 @@
                     return;
                 }
                 
-                const player_name = document.getElementById("playerName").value;
-                
                 // 创建WebSocket连接
                 const ws_protocol = window.location.protocol === "https:" ? "wss" : "ws";
                 const ws_url = `${ws_protocol}://${window.location.host}/ws`;
@@ -1874,7 +2085,7 @@
                         const join_room_message = {
                             "type": "join_room",
                             "room_id": room_id,
-                            "player_name": player_name
+                            "player_name": this.username
                         };
                         this.ws.send(JSON.stringify(join_room_message));
                     };
@@ -1903,9 +2114,6 @@
                 document.getElementById("roomInfo").style.display = "block";
                 document.getElementById("roomNumber").textContent = `房间号: ${data.room_id}`;
                 
-                // 禁用用户名输入框
-                document.getElementById("playerName").disabled = true;
-                
                 // 隐藏房间相关控件
                 document.getElementById("roomControls").style.display = "none";
                 document.getElementById("roomList").style.display = "none";
@@ -1929,9 +2137,6 @@
                 // 显示房间号
                 document.getElementById("roomInfo").style.display = "block";
                 document.getElementById("roomNumber").textContent = `房间号: ${data.room_id}`;
-                
-                // 禁用用户名输入框
-                document.getElementById("playerName").disabled = true;
                 
                 // 隐藏房间相关控件
                 document.getElementById("roomControls").style.display = "none";
@@ -1978,6 +2183,12 @@
                         joinButton.textContent = "加入";
                         joinButton.style.marginTop = "5px";
                         joinButton.addEventListener("click", () => {
+                            // 检查用户是否已登录
+                            if (!this.isLoggedIn) {
+                                document.getElementById("gameStatus").textContent = "请先登录后再加入房间";
+                                return;
+                            }
+                            
                             // 设置房间ID并加入
                             document.getElementById("roomId").value = room.room_id;
                             this.join_specific_room();
