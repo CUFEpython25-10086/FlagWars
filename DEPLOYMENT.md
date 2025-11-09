@@ -419,12 +419,13 @@ for _ in range(6):
 
 ### 服务器端优化
 
-1. **启用 Gzip 压缩**
+1. **启用 Gzip 压缩** ✅ 已实现
    ```python
    # 在 make_app() 函数中添加
    settings = {
        "gzip": True,
        "compress_response": True,
+       "gzip_min_size": 1024,  # 只压缩大于1KB的响应
    }
    return web.Application(handlers, **settings)
    ```
@@ -439,11 +440,11 @@ for _ in range(6):
 
 ### 客户端优化
 
-1. **启用浏览器缓存**
+1. **启用浏览器缓存** ✅ 已实现
    ```python
    # 在 MainHandler 中添加缓存头
    def get(self):
-       self.set_header("Cache-Control", "public, max-age=3600")
+       self.set_header("Cache-Control", "public, max-age=600")
        # 其余代码...
    ```
 

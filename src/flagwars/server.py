@@ -897,6 +897,8 @@ class MainHandler(web.RequestHandler):
         import os
         template_path = os.path.join(os.path.dirname(__file__), 'templates', 'index.html')
         with open(template_path, 'r', encoding='utf-8') as f:
+            # 设置缓存头，启用浏览器缓存
+            self.set_header("Cache-Control", "public, max-age=600")
             self.write(f.read())
 
 
@@ -908,6 +910,8 @@ class LoginHandler(web.RequestHandler):
         import os
         template_path = os.path.join(os.path.dirname(__file__), 'templates', 'login.html')
         with open(template_path, 'r', encoding='utf-8') as f:
+            # 设置缓存头，启用浏览器缓存
+            self.set_header("Cache-Control", "public, max-age=600")
             self.write(f.read())
 
 
@@ -919,6 +923,8 @@ class ShopPageHandler(web.RequestHandler):
         import os
         template_path = os.path.join(os.path.dirname(__file__), 'templates', 'shop.html')
         with open(template_path, 'r', encoding='utf-8') as f:
+            # 设置缓存头，启用浏览器缓存
+            self.set_header("Cache-Control", "public, max-age=600")
             self.write(f.read())
 
 
@@ -944,7 +950,15 @@ def make_app():
     # 添加认证路由
     routes.extend(auth_routes)
     
-    return web.Application(routes)
+    # 启用 Gzip 压缩设置
+    settings = {
+        "gzip": True,
+        "compress_response": True,
+        # 只压缩大于1KB的响应，避免压缩小内容反而增加开销
+        "gzip_min_size": 1024,
+    }
+    
+    return web.Application(routes, **settings)
 
 
 def main():
