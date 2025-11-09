@@ -389,6 +389,81 @@
             border-radius: 3px;
         }
         
+        /* 倒计时显示区域样式 */
+        .countdown-container {
+            background: linear-gradient(135deg, var(--primary-100), var(--accent-100));
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            border: 2px solid var(--primary-200);
+            animation: pulse 1s infinite alternate;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .countdown-container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: shine 2s infinite;
+        }
+        
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.02); }
+        }
+        
+        @keyframes shine {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .countdown-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--text-100);
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .countdown-number {
+            font-size: 4em;
+            font-weight: bold;
+            color: var(--text-100);
+            margin: 10px 0;
+            text-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+            animation: countdown-pulse 1s infinite;
+        }
+        
+        @keyframes countdown-pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .countdown-progress {
+            width: 100%;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+        
+        .countdown-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-300), var(--accent-200));
+            border-radius: 5px;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        
         /* 教程弹窗样式 */
         .tutorial-modal {
             display: none;
@@ -906,6 +981,16 @@
                 <div class="game-tick-container">
                     <div class="game-tick" id="gameTick">回合: 0</div>
                 </div>
+                
+                <!-- 倒计时显示区域 -->
+                <div class="countdown-container" id="countdownContainer" style="display: none;">
+                    <div class="countdown-title">游戏即将开始</div>
+                    <div class="countdown-number" id="countdownNumber">3</div>
+                    <div class="countdown-progress">
+                        <div class="countdown-progress-bar" id="countdownProgressBar"></div>
+                    </div>
+                </div>
+                
                 <canvas id="gameCanvas" width="800" height="800"></canvas>
             </div>
             
@@ -1460,6 +1545,12 @@
                     case 'play_victory_sound':
                         this.handle_play_victory_sound(data);
                         break;
+                    case 'countdown_update':
+                        this.handle_countdown_update(data);
+                        break;
+                    case 'countdown_cancelled':
+                        this.handle_countdown_cancelled(data);
+                        break;
                 }
             }
             
@@ -1654,6 +1745,9 @@
                 this.game_state = data.game_state;
                 document.getElementById("gameStatus").textContent = "游戏开始！";
                 
+                // 隐藏倒计时容器
+                document.getElementById("countdownContainer").style.display = "none";
+                
                 // 禁用准备按钮
                 const readyBtn = document.getElementById("readyBtn");
                 readyBtn.disabled = true;
@@ -1721,6 +1815,61 @@
                 // 可选：在游戏状态中显示胜利者信息
                 if (data.winner) {
                     console.log(`玩家 ${data.winner} 获胜！播放胜利者的胜利音乐: ${victoryMusic}`);
+                }
+            }
+            
+            // 处理倒计时更新
+            handle_countdown_update(data) {
+                // 修复：使用服务器发送的正确字段名
+                const countdown = data.seconds !== undefined ? data.seconds : 3;
+                
+                // 显示倒计时容器
+                document.getElementById("countdownContainer").style.display = "block";
+                
+                // 更新倒计时数字
+                document.getElementById("countdownNumber").textContent = countdown;
+                
+                // 更新进度条 - 确保宽度计算正确
+                const progressBar = document.getElementById("countdownProgressBar");
+                const progressPercentage = (countdown / 3) * 100;
+                progressBar.style.width = `${progressPercentage}%`;
+                
+                // 更新游戏状态文本
+                document.getElementById("gameStatus").textContent = `游戏即将开始... ${countdown}`;
+                
+                // 如果倒计时小于等于1秒，添加特殊效果
+                if (countdown <= 1) {
+                    document.getElementById("countdownNumber").style.color = "#e74c3c";
+                    document.getElementById("countdownContainer").style.animation = "pulse 0.5s infinite alternate";
+                }
+            }
+            
+            // 处理倒计时取消
+            handle_countdown_cancelled(data) {
+                // 隐藏倒计时容器
+                document.getElementById("countdownContainer").style.display = "none";
+                
+                // 重置倒计时数字颜色
+                document.getElementById("countdownNumber").style.color = "";
+                
+                // 重置进度条宽度为0
+                document.getElementById("countdownProgressBar").style.width = "0%";
+                
+                // 更新游戏状态文本
+                document.getElementById("gameStatus").textContent = "倒计时已取消";
+                
+                // 恢复准备状态显示
+                if (this.game_state && this.game_state.players) {
+                    const players = Object.values(this.game_state.players);
+                    const ready_players = players.filter(p => p.ready && !p.is_spectator).length;
+                    const total_players = players.filter(p => !p.is_spectator).length;
+                    
+                    if (ready_players === total_players && total_players >= 2) {
+                        document.getElementById("gameStatus").textContent = "等待游戏开始...";
+                    } else {
+                        document.getElementById("gameStatus").textContent = 
+                            `等待玩家准备 (${ready_players}/${total_players})`;
+                    }
                 }
             }
             

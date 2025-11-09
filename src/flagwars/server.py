@@ -297,6 +297,10 @@ class GameManager:
         self.next_room_id = 1000  # 房间ID从1000开始
         self.available_room_ids = set()  # 已释放的房间号集合
         
+        # 添加倒计时相关变量
+        self.game_countdowns: Dict[str, int] = {}  # 存储每个房间的倒计时剩余秒数
+        self.countdown_tasks: Dict[str, asyncio.Task] = {}  # 存储每个房间的倒计时任务
+        
         # 预定义的8种玩家颜色
         self.player_colors = [
             "#FF0000",  # 红色
@@ -456,18 +460,19 @@ class GameManager:
         # 调试信息：打印准备状态
         logging.info(f"游戏 {game_id} 准备状态: 玩家数={total_players}, 所有玩家准备={all_players_ready}, 准备状态={self.player_ready_states[game_id]}")
         
-        # 如果至少有2个玩家、所有玩家都准备且游戏未开始，则开始游戏
+        # 如果玩家取消准备，则取消倒计时
+        if not self.player_ready_states[game_id][player_id]:
+            if game_id in self.countdown_tasks and not self.countdown_tasks[game_id].done():
+                self.countdown_tasks[game_id].cancel()
+                self.countdown_tasks.pop(game_id, None)
+                self.game_countdowns.pop(game_id, None)
+                logging.info(f"玩家 {player_id} 取消准备，倒计时已取消")
+        
+        # 如果至少有2个玩家、所有玩家都准备且游戏未开始，则开始倒计时
         if total_players >= 2 and all_players_ready and game_id in self.games and not self.games[game_id].game_started:
-            self.games[game_id].game_started = True
-            # 记录游戏开始时间
-            import time
-            self.game_start_times[game_id] = time.time()
-            # 游戏开始时初始化战争迷雾
-            self.games[game_id].update_fog_of_war()
-            # 广播游戏开始消息
-            self.broadcast_game_start(game_id)
-            logging.info(f"游戏 {game_id} 开始!")
-            return True
+            # 开始3秒倒计时
+            self.start_game_countdown(game_id)
+            return False  # 注意：这里返回False，因为游戏还没有真正开始，只是开始了倒计时
         
         return False
 
@@ -625,6 +630,12 @@ class GameManager:
             'leaderboard': []  # 添加排行榜数据
         }
         
+        # 添加倒计时信息
+        if game_id in self.game_countdowns:
+            state_dict['countdown'] = self.game_countdowns[game_id]
+        else:
+            state_dict['countdown'] = 0
+        
         # 获取排行榜数据
         state_dict['leaderboard'] = game_state.get_all_players_stats()
         
@@ -766,8 +777,100 @@ class GameManager:
         except Exception as e:
             logging.error(f"记录游戏结果失败: {str(e)}")
     
+    def start_game_countdown(self, game_id: str):
+        """开始游戏倒计时"""
+        # 如果已经在倒计时中，不再重复开始
+        if game_id in self.countdown_tasks and not self.countdown_tasks[game_id].done():
+            return
+        
+        # 初始化倒计时为3秒
+        self.game_countdowns[game_id] = 3
+        
+        # 创建倒计时任务
+        async def countdown_task():
+            try:
+                for i in range(3, 0, -1):
+                    self.game_countdowns[game_id] = i
+                    # 广播倒计时更新
+                    self.broadcast_countdown_update(game_id, i)
+                    logging.info(f"游戏 {game_id} 倒计时: {i}秒")
+                    await asyncio.sleep(1)
+                
+                # 倒计时结束，开始游戏
+                self.game_countdowns[game_id] = 0
+                self.start_game(game_id)
+                
+            except asyncio.CancelledError:
+                logging.info(f"游戏 {game_id} 倒计时已取消")
+                # 清理倒计时状态
+                self.game_countdowns.pop(game_id, None)
+                # 广播倒计时取消消息
+                self.broadcast_countdown_cancelled(game_id)
+                raise
+        
+        # 启动倒计时任务
+        self.countdown_tasks[game_id] = asyncio.create_task(countdown_task())
+    
+    def start_game(self, game_id: str):
+        """正式开始游戏"""
+        if game_id not in self.games:
+            return
+        
+        # 设置游戏开始状态
+        self.games[game_id].game_started = True
+        # 记录游戏开始时间
+        import time
+        self.game_start_times[game_id] = time.time()
+        # 游戏开始时初始化战争迷雾
+        self.games[game_id].update_fog_of_war()
+        # 广播游戏开始消息
+        self.broadcast_game_start(game_id)
+        logging.info(f"游戏 {game_id} 开始!")
+        
+        # 清理倒计时状态
+        self.game_countdowns.pop(game_id, None)
+        self.countdown_tasks.pop(game_id, None)
+    
+    def broadcast_countdown_update(self, game_id: str, seconds: int):
+        """广播倒计时更新给所有玩家"""
+        if game_id not in self.players:
+            return
+        
+        message = {
+            'type': 'countdown_update',
+            'seconds': seconds,
+            'game_state': self.get_game_state(game_id)
+        }
+        
+        for player_id, handler in self.players[game_id].items():
+            if handler:
+                handler.write_message(json.dumps(message, default=str))
+    
+    def broadcast_countdown_cancelled(self, game_id: str):
+        """广播倒计时取消消息给所有玩家"""
+        if game_id not in self.players:
+            return
+        
+        message = {
+            'type': 'countdown_cancelled',
+            'game_state': self.get_game_state(game_id)
+        }
+        
+        for player_id, handler in self.players[game_id].items():
+            if handler:
+                handler.write_message(json.dumps(message, default=str))
+    
     def close_room(self, room_id: str):
         """关闭房间并清理相关资源"""
+        # 取消该房间的倒计时任务（如果存在）
+        if room_id in self.countdown_tasks and not self.countdown_tasks[room_id].done():
+            self.countdown_tasks[room_id].cancel()
+            self.countdown_tasks.pop(room_id, None)
+        
+        # 清理倒计时状态（如果存在）
+        if room_id in self.game_countdowns:
+            self.game_countdowns.pop(room_id, None)
+        
         if room_id in self.games:
             # 如果游戏正在进行中但未正常结束，标记为非正常结束
             game_state = self.games[room_id]
