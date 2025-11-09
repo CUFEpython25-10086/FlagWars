@@ -7,7 +7,7 @@ authors = [
 ]
 readme = "README_ch.md"
 requires-python = ">=3.8"
-license = {text = "GPL-3.0"}
+license = {text = "CC-BY-NC-SA-4.0"}
 dependencies = [
     "tornado>=6.4.2",
 ]
