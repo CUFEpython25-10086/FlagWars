@@ -541,18 +541,22 @@
             border-radius: 3px;
         }
         
-        /* 倒计时显示区域样式 */
+        /* 质感倒计时显示区域样式 */
         .countdown-container {
-            background: linear-gradient(135deg, var(--primary-100), var(--accent-100));
-            border-radius: 15px;
-            padding: 20px;
+            background: 
+                linear-gradient(135deg, 
+                    rgba(0, 15, 30, 0.9) 0%, 
+                    rgba(0, 25, 45, 0.9) 100%);
+            border-radius: 12px;
+            padding: 25px 30px;
             margin: 15px 0;
             text-align: center;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-            border: 2px solid var(--primary-200);
-            animation: pulse 1s infinite alternate;
+            box-shadow: 
+                0 4px 20px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(46, 134, 171, 0.3);
             position: relative;
-            overflow: hidden;
+            overflow: hidden; /* 防止光效漏出 */
         }
         
         .countdown-container::before {
@@ -562,58 +566,140 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            animation: shine 2s infinite;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(46, 134, 171, 0.1), 
+                transparent);
+            animation: subtle-scan 3.5s infinite;
         }
         
-        @keyframes pulse {
-            from { transform: scale(1); }
-            to { transform: scale(1.02); }
-        }
-        
-        @keyframes shine {
+        @keyframes subtle-scan {
             0% { left: -100%; }
             100% { left: 100%; }
         }
         
         .countdown-title {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: var(--text-100);
-            margin-bottom: 10px;
-            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            font-size: 1.1em;
+            font-weight: 500;
+            color: var(--primary-100);
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+            position: relative;
+            opacity: 0.9;
         }
         
         .countdown-number {
-            font-size: 4em;
-            font-weight: bold;
-            color: var(--text-100);
-            margin: 10px 0;
-            text-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
-            animation: countdown-pulse 1s infinite;
+            font-size: 4.5em;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            color: var(--accent-100);
+            margin: 15px 0;
+            text-shadow: 0 0 8px rgba(46, 134, 171, 0.6);
+            transition: all 0.3s ease;
         }
         
-        @keyframes countdown-pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.1); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 1; }
+        .countdown-number.number-animate {
+            transform: scale(1.05);
+            transition: transform 0.15s ease;
         }
         
         .countdown-progress {
             width: 100%;
             height: 10px;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.4);
             border-radius: 5px;
             overflow: hidden;
-            margin-top: 15px;
+            margin-top: 20px;
+            border: 1px solid rgba(46, 134, 171, 0.3);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+            position: relative;
         }
         
         .countdown-progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, var(--primary-300), var(--accent-200));
+            background: linear-gradient(90deg, 
+                rgba(46, 134, 171, 0.8) 0%, 
+                var(--accent-100) 100%);
             border-radius: 5px;
             width: 0%;
-            transition: width 0.1s linear;
+            transition: width 0.3s ease-out;
+            position: relative;
+            box-shadow: 0 0 8px rgba(46, 134, 171, 0.4);
+        }
+        
+        .countdown-progress-bar::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: bar-scan 1.5s infinite;
+            pointer-events: none; /* 确保不阻挡交互 */
+        }
+        
+        @keyframes progress-scan {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        @keyframes energy-flow {
+            0% { 
+                box-shadow: 
+                    0 0 10px var(--accent-100),
+                    inset 0 0 10px rgba(255, 255, 255, 0.2);
+            }
+            100% { 
+                box-shadow: 
+                    0 0 15px var(--accent-100),
+                    inset 0 0 15px rgba(255, 255, 255, 0.3);
+            }
+        }
+        
+        @keyframes bar-scan {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        /* 倒计时数字变化特效 */
+        .countdown-number.counting {
+            animation: countdown-pulse 0.3s ease-out;
+        }
+        
+        @keyframes countdown-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        /* 紧急状态特效 */
+        .countdown-container.alert {
+            border-color: #ff4757;
+            animation: alert-pulse 0.5s ease-in-out infinite alternate;
+        }
+        
+        .countdown-container.alert .countdown-number {
+            color: #ff4757;
+            text-shadow: 
+                0 0 10px #ff4757,
+                0 0 20px #ff4757,
+                0 0 30px #ff4757;
+        }
+        
+        @keyframes alert-pulse {
+            0% { 
+                box-shadow: 
+                    0 0 30px rgba(255, 71, 87, 0.4),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+            }
+            100% { 
+                box-shadow: 
+                    0 0 40px rgba(255, 71, 87, 0.6),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+            }
         }
         
         /* 教程弹窗样式 */
@@ -1975,57 +2061,78 @@
             
             // 处理倒计时更新
             handle_countdown_update(data) {
-                // 修复：使用服务器发送的正确字段名
                 const countdown = data.seconds !== undefined ? data.seconds : 3;
                 
                 // 显示倒计时容器
-                document.getElementById("countdownContainer").style.display = "block";
+                const countdownContainer = document.getElementById("countdownContainer");
+                const countdownNumber = document.getElementById("countdownNumber");
+                countdownContainer.style.display = "block";
                 
-                // 更新倒计时数字
-                document.getElementById("countdownNumber").textContent = countdown;
+                // 更新倒计时数字并添加动画效果
+                countdownNumber.textContent = countdown;
+                countdownNumber.classList.add("number-animate");
                 
-                // 更新进度条 - 确保宽度计算正确
+                // 移除动画类
+                setTimeout(() => {
+                    countdownNumber.classList.remove("number-animate");
+                }, 150);
+                
+                // 更新进度条
                 const progressBar = document.getElementById("countdownProgressBar");
                 const progressPercentage = (countdown / 3) * 100;
                 progressBar.style.width = `${progressPercentage}%`;
                 
                 // 更新游戏状态文本
-                document.getElementById("gameStatus").textContent = `游戏即将开始... ${countdown}`;
+                document.getElementById("gameStatus").textContent = `准备开始游戏 (${countdown})`;
                 
-                // 如果倒计时小于等于1秒，添加特殊效果
-                if (countdown <= 1) {
-                    document.getElementById("countdownNumber").style.color = "#e74c3c";
-                    document.getElementById("countdownContainer").style.animation = "pulse 0.5s infinite alternate";
+                // 播放倒计时音效
+                this.play_countdown_sound(countdown);
+            }
+            
+            // 播放倒计时音效
+            play_countdown_sound(countdown) {
+                // 这里可以添加音效播放逻辑
+                // 由于浏览器限制，可能需要用户交互后才能播放音频
+                try {
+                    // 创建简单的音频反馈（可以使用Web Audio API）
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    // 根据倒计时设置不同频率
+                    const frequencies = [800, 600, 400]; // 3, 2, 1秒对应的频率
+                    const frequency = frequencies[countdown - 1] || 400;
+                    
+                    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                } catch (error) {
+                    // 静默失败，不影响游戏流程
+                    console.log("音频播放失败:", error);
                 }
             }
             
             // 处理倒计时取消
             handle_countdown_cancelled(data) {
                 // 隐藏倒计时容器
-                document.getElementById("countdownContainer").style.display = "none";
+                const countdownContainer = document.getElementById("countdownContainer");
+                const progressBar = document.getElementById("countdownProgressBar");
                 
-                // 重置倒计时数字颜色
-                document.getElementById("countdownNumber").style.color = "";
+                countdownContainer.style.display = "none";
                 
-                // 重置进度条宽度为0
-                document.getElementById("countdownProgressBar").style.width = "0%";
+                // 重置进度条
+                progressBar.style.width = "0%";
                 
                 // 更新游戏状态文本
-                document.getElementById("gameStatus").textContent = "倒计时已取消";
-                
-                // 恢复准备状态显示
-                if (this.game_state && this.game_state.players) {
-                    const players = Object.values(this.game_state.players);
-                    const ready_players = players.filter(p => p.ready && !p.is_spectator).length;
-                    const total_players = players.filter(p => !p.is_spectator).length;
-                    
-                    if (ready_players === total_players && total_players >= 2) {
-                        document.getElementById("gameStatus").textContent = "等待游戏开始...";
-                    } else {
-                        document.getElementById("gameStatus").textContent = 
-                            `等待玩家准备 (${ready_players}/${total_players})`;
-                    }
-                }
+                document.getElementById("gameStatus").textContent = "等待玩家准备";
             }
             
             on_ws_close(event) {
