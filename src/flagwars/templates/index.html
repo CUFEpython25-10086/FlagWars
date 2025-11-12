@@ -31,45 +31,204 @@
         body {
             background-color: var(--bg-100);
             position: relative;
+            overflow-x: hidden;
         }
         
+        /* 动态科技背景 */
         body::before {
             content: "";
             position: fixed;
             inset: 0;
             background: 
-                /* 深色虚线层（节奏线） */
-                repeating-linear-gradient(to right, transparent 0 38px, rgba(255, 87, 51, 0.2) 38px 40px, transparent 40px 120px), 
-                repeating-linear-gradient(to bottom, transparent 0 38px, rgba(255, 87, 51, 0.2) 38px 40px, transparent 40px 120px), 
-                /* 浅色实线层（主网格） */
-                linear-gradient(to right, rgba(46, 134, 171, 0.15) 1px, transparent 1px), 
-                linear-gradient(to bottom, rgba(46, 134, 171, 0.15) 1px, transparent 1px), 
-                /* 噪声层（纸质质感） */
-                radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 1%, transparent 1%) repeat;
+                /* 动态渐变背景 */
+                radial-gradient(circle at 20% 80%, rgba(255, 87, 51, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(46, 134, 171, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(255, 243, 191, 0.05) 0%, transparent 50%),
+                /* 主网格层 */
+                linear-gradient(to right, rgba(46, 134, 171, 0.2) 1px, transparent 1px), 
+                linear-gradient(to bottom, rgba(46, 134, 171, 0.2) 1px, transparent 1px),
+                /* 次网格层 */
+                linear-gradient(to right, rgba(255, 87, 51, 0.1) 1px, transparent 1px), 
+                linear-gradient(to bottom, rgba(255, 87, 51, 0.1) 1px, transparent 1px);
             background-size: 
-                120px 120px,   /* 虚线节奏水平 */
-                120px 120px,   /* 虚线节奏垂直 */
-                60px 60px,     /* 实线水平 */
-                60px 60px,     /* 实线垂直 */
-                4px 4px;       /* 噪声纹理 */
+                100% 100%,     /* 渐变背景 */
+                100% 100%,     
+                100% 100%,     
+                50px 50px,     /* 主网格 */
+                50px 50px,     
+                100px 100px,   /* 次网格 */
+                100px 100px;
             background-position: center;
-            z-index: -1;
+            z-index: -2;
+            animation: backgroundShift 20s ease-in-out infinite alternate;
         }
         
-        /* 小方块点缀 */
-        .dot {
+        /* 浮动粒子效果 */
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, rgba(255, 87, 51, 0.4), transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(46, 134, 171, 0.4), transparent),
+                radial-gradient(1px 1px at 90px 40px, rgba(255, 243, 191, 0.6), transparent),
+                radial-gradient(1px 1px at 130px 80px, rgba(255, 87, 51, 0.3), transparent),
+                radial-gradient(2px 2px at 160px 30px, rgba(46, 134, 171, 0.3), transparent),
+                radial-gradient(1px 1px at 200px 90px, rgba(255, 243, 191, 0.5), transparent);
+            background-repeat: repeat;
+            background-size: 200px 120px;
+            z-index: -1;
+            animation: particleFloat 30s linear infinite;
+        }
+        
+        /* 动态背景动画 */
+        @keyframes backgroundShift {
+            0% {
+                background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%;
+            }
+            25% {
+                background-position: 100% 100%, 100% 100%, 50% 50%, 10% 10%, 5% 15%, 20% 20%, 15% 10%;
+            }
+            50% {
+                background-position: 50% 50%, 50% 50%, 100% 0%, 25% 25%, 30% 35%, 40% 40%, 35% 25%;
+            }
+            75% {
+                background-position: 0% 100%, 0% 100%, 0% 50%, 15% 35%, 20% 45%, 30% 60%, 25% 45%;
+            }
+            100% {
+                background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%;
+            }
+        }
+        
+        /* 粒子浮动动画 */
+        @keyframes particleFloat {
+            0% {
+                transform: translateX(0) translateY(0);
+            }
+            33% {
+                transform: translateX(-30px) translateY(-20px);
+            }
+            66% {
+                transform: translateX(30px) translateY(10px);
+            }
+            100% {
+                transform: translateX(0) translateY(0);
+            }
+        }
+        
+        /* 动态扫描线效果 */
+        .scan-lines {
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent 0px,
+                rgba(46, 134, 171, 0.03) 1px,
+                transparent 2px,
+                transparent 4px
+            );
+            z-index: -1;
+            animation: scanlineMove 8s linear infinite;
+        }
+        
+        /* 数据流动画 */
+        .data-stream {
+            position: fixed;
+            right: -100px;
+            top: 0;
+            width: 2px;
+            height: 100vh;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                rgba(46, 134, 171, 0.8) 50%,
+                transparent 100%
+            );
+            z-index: -1;
+            animation: dataFlow 12s linear infinite;
+        }
+        
+        .data-stream:nth-child(2) {
+            right: -50px;
+            animation-delay: -3s;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                rgba(255, 87, 51, 0.6) 50%,
+                transparent 100%
+            );
+        }
+        
+        .data-stream:nth-child(3) {
+            right: 0px;
+            animation-delay: -6s;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                rgba(255, 243, 191, 0.4) 50%,
+                transparent 100%
+            );
+        }
+        
+        /* 扫描线移动动画 */
+        @keyframes scanlineMove {
+            0% {
+                background-position: 0 0;
+            }
+            100% {
+                background-position: 4px 0;
+            }
+        }
+        
+        /* 数据流动画 */
+        @keyframes dataFlow {
+            0% {
+                transform: translateX(0) translateY(-100vh);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(0) translateY(100vh);
+                opacity: 0;
+            }
+        }
+        
+        /* 小方块点缀 - 升级为发光节点 */
+        .tech-node {
             position: absolute;
-            width: 6px;
-            height: 6px;
-            background-color: var(--primary-200);
+            width: 8px;
+            height: 8px;
+            background: radial-gradient(circle, var(--primary-200), var(--primary-100));
+            border-radius: 50%;
             z-index: -1;
+            animation: nodePulse 3s ease-in-out infinite alternate;
+            box-shadow: 0 0 10px var(--primary-200);
         }
         
-        /* 随机分布的小方块 */
-        .dot:nth-child(1) { top: 30%; left: 45%; }
-        .dot:nth-child(2) { top: 55%; left: 60%; }
-        .dot:nth-child(3) { top: 72%; left: 40%; }
-        .dot:nth-child(4) { top: 80%; left: 70%; }
+        /* 随机分布的发光节点 */
+        .tech-node:nth-child(1) { top: 20%; left: 15%; animation-delay: 0s; }
+        .tech-node:nth-child(2) { top: 40%; left: 80%; animation-delay: 1s; }
+        .tech-node:nth-child(3) { top: 60%; left: 25%; animation-delay: 2s; }
+        .tech-node:nth-child(4) { top: 80%; left: 70%; animation-delay: 0.5s; }
+        .tech-node:nth-child(5) { top: 30%; left: 60%; animation-delay: 1.5s; }
+        .tech-node:nth-child(6) { top: 70%; left: 40%; animation-delay: 2.5s; }
+        
+        /* 节点脉动动画 */
+        @keyframes nodePulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 10px var(--primary-200);
+            }
+            100% {
+                transform: scale(1.5);
+                box-shadow: 0 0 20px var(--primary-200), 0 0 30px var(--primary-100);
+            }
+        }
         
         .container {
             max-width: 1400px;
@@ -80,6 +239,51 @@
             padding: 30px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             border: 1px solid var(--bg-300);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 容器发光边框效果 */
+        .container::before {
+            content: "";
+            position: absolute;
+            inset: -2px;
+            background: linear-gradient(45deg, 
+                rgba(46, 134, 171, 0.3), 
+                rgba(255, 87, 51, 0.3), 
+                rgba(46, 134, 171, 0.3)
+            );
+            border-radius: 15px;
+            z-index: -1;
+            animation: borderGlow 3s ease-in-out infinite alternate;
+        }
+        
+        /* 边框发光动画 */
+        @keyframes borderGlow {
+            0% {
+                opacity: 0.3;
+                background: linear-gradient(45deg, 
+                    rgba(46, 134, 171, 0.3), 
+                    rgba(255, 87, 51, 0.3), 
+                    rgba(46, 134, 171, 0.3)
+                );
+            }
+            50% {
+                opacity: 0.6;
+                background: linear-gradient(45deg, 
+                    rgba(255, 87, 51, 0.6), 
+                    rgba(46, 134, 171, 0.6), 
+                    rgba(255, 243, 191, 0.6)
+                );
+            }
+            100% {
+                opacity: 0.3;
+                background: linear-gradient(45deg, 
+                    rgba(46, 134, 171, 0.3), 
+                    rgba(255, 87, 51, 0.3), 
+                    rgba(46, 134, 171, 0.3)
+                );
+            }
         }
         
         .header {
@@ -222,30 +426,54 @@
         }
         
         button {
-            background: var(--primary-100);
+            background: linear-gradient(135deg, var(--primary-100), var(--primary-200));
             color: var(--text-100);
             cursor: pointer;
             transition: all 0.3s;
             font-weight: bold;
             border: 2px solid var(--primary-200);
             text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 按钮科技光效 */
+        button::before {
+            content: "";
+            position: absolute;
+            top: -2px;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+            transition: left 0.5s;
+        }
+        
+        button:hover::before {
+            left: 100%;
         }
         
         button:hover {
-            background: var(--primary-200);
+            background: linear-gradient(135deg, var(--primary-200), var(--primary-300));
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            box-shadow: 
+                0 4px 8px rgba(0, 0, 0, 0.4),
+                0 0 15px rgba(255, 87, 51, 0.3);
             border-color: var(--primary-300);
         }
         
         button:active {
             transform: translateY(0);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            box-shadow: 
+                0 1px 2px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(0, 0, 0, 0.2);
         }
         
         button:disabled {
-            background: var(--bg-300);
+            background: linear-gradient(135deg, var(--bg-300), #666);
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
@@ -253,9 +481,8 @@
             opacity: 0.6;
         }
         
-        button:disabled {
-            background: #666;
-            cursor: not-allowed;
+        button:disabled::before {
+            display: none;
         }
         
         .status {
@@ -955,10 +1182,19 @@
     </style>
 </head>
 <body>
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
+    <!-- 动态科技背景效果 -->
+    <div class="scan-lines"></div>
+    <div class="data-stream"></div>
+    <div class="data-stream"></div>
+    <div class="data-stream"></div>
+    
+    <!-- 发光科技节点 -->
+    <div class="tech-node"></div>
+    <div class="tech-node"></div>
+    <div class="tech-node"></div>
+    <div class="tech-node"></div>
+    <div class="tech-node"></div>
+    <div class="tech-node"></div>
     
     <div class="container">
         <div class="header">
