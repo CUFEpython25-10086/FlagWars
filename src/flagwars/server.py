@@ -58,10 +58,16 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
                 self._handle_get_game_state()
             elif message_type == 'play_again':
                 self._handle_play_again()
+            else:
+                logging.warning(f"未知消息类型: {message_type}")
+                self.send_error(f"未知消息类型: {message_type}")
             
         except json.JSONDecodeError:
-            logging.error("JSON解析错误")
+            logging.error(f"JSON解析错误: {message}")
             self.send_error("消息格式错误")
+        except Exception as e:
+            logging.error(f"处理消息时发生错误: {str(e)}", exc_info=True)
+            self.send_error("服务器内部错误")
     
     def _handle_create_room(self, data):
         """处理创建房间请求"""
@@ -1045,7 +1051,6 @@ def make_app():
         (r"/login", LoginHandler),
         (r"/shop", ShopPageHandler),
         (r"/ws", GameWebSocketHandler, {"game_manager": game_manager}),
-        (r"/static/(.*)", web.StaticFileHandler, {"path": os.path.join(project_root, "static")}),
         (r"/icons/(.*)", web.StaticFileHandler, {"path": os.path.join(project_root, "icons")}),
         (r"/music/(.*)", web.StaticFileHandler, {"path": os.path.join(project_root, "music")}),
     ]
