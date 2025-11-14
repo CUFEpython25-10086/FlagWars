@@ -528,12 +528,53 @@ class PurchaseMusicHandler(BaseHandler):
             })
 
 
+class CheckUsernameHandler(BaseHandler):
+    """检查用户名是否存在处理器"""
+    
+    async def get(self):
+        """检查用户名是否已存在"""
+        try:
+            username = self.get_argument('username', '').strip()
+            
+            if not username:
+                self.write_json({
+                    'success': False,
+                    'message': '用户名不能为空'
+                })
+                return
+            
+            # 检查用户名长度
+            if len(username) < 3 or len(username) > 20:
+                self.write_json({
+                    'success': False,
+                    'message': '用户名长度必须在3-20个字符之间'
+                })
+                return
+            
+            # 检查用户名是否已存在
+            exists = db.check_username_exists(username)
+            
+            self.write_json({
+                'success': True,
+                'exists': exists,
+                'message': '用户名检查完成'
+            })
+            
+        except Exception as e:
+            logging.error(f"检查用户名错误: {str(e)}")
+            self.write_json({
+                'success': False,
+                'message': '检查用户名失败，请稍后再试'
+            })
+
+
 # 路由配置
 auth_routes = [
     (r"/api/auth/login", LoginHandler),
     (r"/api/auth/register", RegisterHandler),
     (r"/api/auth/logout", LogoutHandler),
     (r"/api/auth/me", CheckAuthHandler),  # 修改为/me，与前端匹配
+    (r"/api/auth/check-username", CheckUsernameHandler),  # 检查用户名是否存在
     (r"/api/user/stats", UserStatsHandler),
     (r"/api/user/history", GameHistoryHandler),
     (r"/api/user/music", UserMusicSettingsHandler),

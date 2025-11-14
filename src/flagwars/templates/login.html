@@ -382,6 +382,36 @@
         const userSection = document.getElementById('userSection');
         const authSection = document.getElementById('authSection');
         
+        // 用户名检查相关变量
+        let usernameCheckTimeout;
+        const registerUsernameInput = document.getElementById('registerUsername');
+        
+        // 检查用户名是否存在
+        async function checkUsernameExists(username) {
+            if (!username || username.length < 3) {
+                document.getElementById('registerUsernameError').textContent = '';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/auth/check-username?username=${encodeURIComponent(username)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.exists) {
+                        document.getElementById('registerUsernameError').textContent = '该用户名已被使用';
+                        document.getElementById('registerUsernameError').style.color = '#e74c3c';
+                    } else {
+                        document.getElementById('registerUsernameError').textContent = '用户名可用';
+                        document.getElementById('registerUsernameError').style.color = '#27ae60';
+                    }
+                }
+            } catch (error) {
+                console.error('检查用户名错误:', error);
+                document.getElementById('registerUsernameError').textContent = '';
+            }
+        }
+        
         // 切换登录/注册标签
         loginTab.addEventListener('click', () => {
             loginTab.classList.add('active');
@@ -397,6 +427,23 @@
             registerForm.style.display = 'block';
             loginForm.style.display = 'none';
             clearMessages();
+        });
+        
+        // 注册用户名输入框事件监听（实时检查）
+        registerUsernameInput.addEventListener('input', (e) => {
+            clearTimeout(usernameCheckTimeout);
+            const username = e.target.value.trim();
+            
+            // 延迟检查，避免频繁请求
+            usernameCheckTimeout = setTimeout(() => {
+                checkUsernameExists(username);
+            }, 500);
+        });
+        
+        // 注册用户名输入框失去焦点时检查
+        registerUsernameInput.addEventListener('blur', (e) => {
+            const username = e.target.value.trim();
+            checkUsernameExists(username);
         });
         
         // 清除所有消息
@@ -480,6 +527,22 @@
             if (password !== confirmPassword) {
                 document.getElementById('confirmPasswordError').textContent = '两次输入的密码不一致';
                 valid = false;
+            }
+            
+            // 检查用户名是否可用
+            if (valid) {
+                try {
+                    const checkResponse = await fetch(`/api/auth/check-username?username=${encodeURIComponent(username)}`);
+                    const checkData = await checkResponse.json();
+                    
+                    if (checkData.success && checkData.exists) {
+                        document.getElementById('registerUsernameError').textContent = '该用户名已被使用';
+                        document.getElementById('registerUsernameError').style.color = '#e74c3c';
+                        valid = false;
+                    }
+                } catch (error) {
+                    console.error('检查用户名错误:', error);
+                }
             }
             
             if (!valid) return;

@@ -597,6 +597,19 @@ class Database:
                 return cursor.rowcount > 0
         except sqlite3.Error:
             return False
+    
+    def check_username_exists(self, username: str) -> bool:
+        """检查用户名是否已存在"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT 1 FROM users WHERE username = ?",
+                    (username,)
+                )
+                return cursor.fetchone() is not None
+        except sqlite3.Error:
+            return False
 
 
 # 创建全局数据库实例
