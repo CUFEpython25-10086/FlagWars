@@ -1,8 +1,6 @@
 """账号系统相关API"""
 import json
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Optional
 
 from tornado import web
 
