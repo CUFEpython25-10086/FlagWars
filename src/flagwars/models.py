@@ -1,6 +1,7 @@
 """游戏数据模型定义"""
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
+import random # 确保导入random
 
 
 class TerrainType(Enum):
@@ -21,8 +22,8 @@ class Player:
         self.color = color
         self.base_position: Optional[Tuple[int, int]] = None
         self.is_alive = True
-        self.is_spectator = False  # 新增：标记玩家是否为旁观者
-        self.ready = False  # 添加ready属性
+        self.is_spectator = False
+        self.ready = False
     
     def eliminate(self):
         """将玩家标记为已淘汰并设置为旁观者"""
@@ -56,23 +57,23 @@ class Tile:
     def _get_required_soldiers(self) -> int:
         """获取占领所需士兵数量"""
         if self.terrain_type == TerrainType.PLAIN:
-            return 0  # 平原无需士兵即可占领
+            return 0
         elif self.terrain_type == TerrainType.BASE:
             return 10
         elif self.terrain_type == TerrainType.TOWER:
             import random
-            return random.randint(5, 20)  # 塔楼所需士兵数量随机（5~20）
+            return random.randint(5, 20)
         elif self.terrain_type == TerrainType.WALL:
             return 3
         elif self.terrain_type == TerrainType.MOUNTAIN:
-            return 9999  # 不可占领
+            return 9999
         elif self.terrain_type == TerrainType.SWAMP:
-            return 0  # 沼泽无需士兵即可占领
+            return 0
         return 0
     
     def is_passable(self) -> bool:
         """判断是否可通行"""
-        return self.terrain_type not in [TerrainType.MOUNTAIN]# 不是[TerrainType.MOUNTAIN, TerrainType.WALL]
+        return self.terrain_type not in [TerrainType.MOUNTAIN]
     
     def can_be_captured(self) -> bool:
         """判断是否可被占领"""
@@ -91,9 +92,9 @@ class GameState:
         self.game_over = False
         self.game_started = False
         self.winner = None
-        self.pending_moves = {}  # 存储待处理的移动操作
-        self.spawn_points = []  # 存储玩家出生点
-        self.game_over_type = None  # 添加游戏结束类型标记：'normal'（正常结束）或 'abnormal'（非正常结束）
+        self.pending_moves = {}
+        self.spawn_points = []
+        self.game_over_type = None
         
         # 初始化地图
         self._initialize_map()
@@ -107,25 +108,23 @@ class GameState:
                 row.append(Tile(x, y, TerrainType.PLAIN))
             self.tiles.append(row)
         
-        # 随机生成地形（简化版）
+        # 随机生成地形
         self._generate_random_terrain()
     
     def _generate_random_terrain(self):
         """随机生成地形"""
         import random
         
-        # 生成一些塔楼 - 增加到8个
+        # 生成一些塔楼
         towers_placed = 0
-        max_attempts = 100  # 最大尝试次数，防止无限循环
+        max_attempts = 100
         while towers_placed < 8 and max_attempts > 0:
             max_attempts -= 1
             x = random.randint(2, self.map_width - 3)
             y = random.randint(2, self.map_height - 3)
-            # 只有在当前位置是平原时才放置塔楼
             if self.tiles[y][x].terrain_type == TerrainType.PLAIN:
                 self.tiles[y][x].terrain_type = TerrainType.TOWER
                 self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
-                # 初始化中立地块的士兵数量
                 self.tiles[y][x].soldiers = self.tiles[y][x].required_soldiers
                 towers_placed += 1
         
@@ -136,26 +135,22 @@ class GameState:
             max_attempts -= 1
             x = random.randint(1, self.map_width - 2)
             y = random.randint(1, self.map_height - 2)
-            # 只有在当前位置是平原时才放置城墙
             if self.tiles[y][x].terrain_type == TerrainType.PLAIN:
                 self.tiles[y][x].terrain_type = TerrainType.WALL
                 self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
-                # 初始化中立地块的士兵数量
                 self.tiles[y][x].soldiers = self.tiles[y][x].required_soldiers
                 walls_placed += 1
         
-        # 生成一些山脉 - 增加到12个
+        # 生成一些山脉
         mountains_placed = 0
         max_attempts = 100
         while mountains_placed < 12 and max_attempts > 0:
             max_attempts -= 1
             x = random.randint(1, self.map_width - 2)
             y = random.randint(1, self.map_height - 2)
-            # 只有在当前位置是平原时才放置山脉
             if self.tiles[y][x].terrain_type == TerrainType.PLAIN:
                 self.tiles[y][x].terrain_type = TerrainType.MOUNTAIN
                 self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
-                # 山脉不可占领，不需要士兵
                 mountains_placed += 1
         
         # 生成一些沼泽
@@ -165,73 +160,113 @@ class GameState:
             max_attempts -= 1
             x = random.randint(1, self.map_width - 2)
             y = random.randint(1, self.map_height - 2)
-            # 只有在当前位置是平原时才放置沼泽
             if self.tiles[y][x].terrain_type == TerrainType.PLAIN:
                 self.tiles[y][x].terrain_type = TerrainType.SWAMP
                 self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
-                # 沼泽无需士兵即可占领，不需要初始化士兵数量
                 swamps_placed += 1
     
     def generate_random_spawn_points(self, num_players: int) -> List[Tuple[int, int]]:
-        """生成随机的玩家出生点"""
+        """
+        生成尽可能分散的玩家出生点 (使用最大化最小距离算法)
+        """
         import random
-        import math
         
         spawn_points = []
-        
-        # 地图边界，确保出生点不会太靠近边缘
+        candidates = []
         min_distance_from_edge = 2
-        min_distance_between_spawns = max(
-            min(self.map_width, self.map_height) // 3,  # 至少是地图最小尺寸的1/3
-            5  # 最小距离为5格
-        )
         
-        # 尝试生成指定数量的出生点
-        attempts = 0
-        max_attempts = 1000  # 最大尝试次数，防止无限循环
+        # 1. 收集所有合法的候选位置
+        for y in range(min_distance_from_edge, self.map_height - min_distance_from_edge):
+            for x in range(min_distance_from_edge, self.map_width - min_distance_from_edge):
+                if self._is_safe_spawn_location(x, y):
+                    candidates.append((x, y))
         
-        while len(spawn_points) < num_players and attempts < max_attempts:
-            attempts += 1
+        if not candidates:
+            # 极端情况：没有候选点，回退到纯随机
+            print("Warning: No valid spawn candidates found!")
+            for _ in range(num_players):
+                spawn_points.append((
+                    random.randint(0, self.map_width-1),
+                    random.randint(0, self.map_height-1)
+                ))
+            return spawn_points
+
+        # 2. 随机选择第一个出生点
+        first_spawn = random.choice(candidates)
+        spawn_points.append(first_spawn)
+        # 从候选列表中移除已选点
+        candidates.remove(first_spawn)
+        
+        # 3. 为剩余玩家寻找最佳位置
+        # 算法：遍历所有候选点，找到那个"离最近的已有出生点距离最远"的点
+        while len(spawn_points) < num_players and candidates:
+            best_candidate = None
+            max_min_distance = -1
             
-            # 生成随机坐标，确保不靠近边缘
-            x = random.randint(min_distance_from_edge, self.map_width - 1 - min_distance_from_edge)
-            y = random.randint(min_distance_from_edge, self.map_height - 1 - min_distance_from_edge)
+            for cand in candidates:
+                cand_x, cand_y = cand
+                
+                # 计算该候选点到所有已存在出生点的最近距离
+                min_dist_to_existing = float('inf')
+                for sp_x, sp_y in spawn_points:
+                    # 使用曼哈顿距离 (或者欧几里得距离)
+                    dist = abs(cand_x - sp_x) + abs(cand_y - sp_y)
+                    if dist < min_dist_to_existing:
+                        min_dist_to_existing = dist
+                
+                # 记录"最近距离"最大的那个候选点
+                if min_dist_to_existing > max_min_distance:
+                    max_min_distance = min_dist_to_existing
+                    best_candidate = cand
             
-            # 检查该位置是否适合作为出生点
-            if self._is_valid_spawn_point(x, y, spawn_points, min_distance_between_spawns):
-                spawn_points.append((x, y))
+            if best_candidate:
+                spawn_points.append(best_candidate)
+                candidates.remove(best_candidate)
+            else:
+                break
         
-        # 随机打乱出生点顺序，确保公平性
+        # 随机打乱出生点分配顺序，避免第一个生成的点总是被特定玩家占据
         random.shuffle(spawn_points)
         
         return spawn_points
-    
-    def _is_valid_spawn_point(self, x: int, y: int, existing_points: List[Tuple[int, int]], min_distance: int) -> bool:
-        """检查指定位置是否适合作为出生点"""
-        # 检查地形是否适合（必须是平原）
+
+    def _is_safe_spawn_location(self, x: int, y: int) -> bool:
+        """检查指定位置的地形和周围环境是否适合作为出生点"""
+        # 1. 检查本身地形
         if self.tiles[y][x].terrain_type != TerrainType.PLAIN:
             return False
         
-        # 检查与现有出生点的距离
-        for px, py in existing_points:
-            # 使用曼哈顿距离
-            distance = abs(x - px) + abs(y - py)
-            if distance < min_distance:
-                return False
-        
-        # 检查周围是否有太多障碍物
+        # 2. 检查周围是否有太多障碍物 (防止出生即被困)
         obstacle_count = 0
         check_radius = 2  # 检查周围2格的范围
+        total_neighbors = 0
         
         for dy in range(-check_radius, check_radius + 1):
             for dx in range(-check_radius, check_radius + 1):
+                # 跳过中心点
+                if dx == 0 and dy == 0:
+                    continue
+                    
                 nx, ny = x + dx, y + dy
-                if (0 <= nx < self.map_width and 0 <= ny < self.map_height and
-                    self.tiles[ny][nx].terrain_type == TerrainType.MOUNTAIN):
-                    obstacle_count += 1
+                if 0 <= nx < self.map_width and 0 <= ny < self.map_height:
+                    total_neighbors += 1
+                    # 山脉视为绝对障碍
+                    if self.tiles[ny][nx].terrain_type == TerrainType.MOUNTAIN:
+                        obstacle_count += 1
         
-        # 如果周围障碍物太多，则不适合作为出生点
-        if obstacle_count > check_radius:  # 允许一些障碍物，但不能太多
+        # 如果周围超过一半是障碍物，或者紧邻的上下左右有2个以上障碍物，则不安全
+        if obstacle_count > (total_neighbors // 2): 
+            return False
+            
+        # 额外检查：确保紧邻的十字方向至少有2个通路
+        adj_passable = 0
+        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < self.map_width and 0 <= ny < self.map_height:
+                if self.tiles[ny][nx].is_passable():
+                    adj_passable += 1
+        
+        if adj_passable < 2: # 至少有两个方向可以走
             return False
         
         return True

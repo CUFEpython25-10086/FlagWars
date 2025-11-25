@@ -2448,109 +2448,241 @@
                 const screen_x = x * this.tile_size;
                 const screen_y = y * this.tile_size;
                 
-                // 地形颜色
+                // --- 1. 配色方案调整 ---
                 const terrain_colors = {
-                    "plain": "#27ae60",      // 平原 - 绿色
-                    "base": "#e74c3c",      // 基地 - 红色
-                    "tower": "#f39c12",     // 塔楼 - 橙色
-                    "wall": "#95a5a6",      // 城墙 - 灰色
-                    "mountain": "#7f8c8d", // 山脉 - 深灰
-                    "swamp": "#16a085"      // 沼泽 - 青色
+                    "plain": "#d3d3d3",      // 平原 - 改为更灰一点的颜色
+                    "base": "#bdc3c7",       // 基地 - 深灰
+                    "tower": "#e0e0e0",      // 塔楼 - 浅灰
+                    "wall": "#95a5a6",       // 城墙 - 混凝土灰
+                    "mountain": "#7f8c8d",   // 山脉 - 深蓝灰
+                    "swamp": "#78909c"       // 沼泽 - 蓝灰/苔藓色
                 };
                 
-                // 检查是否在战争迷雾中
                 const is_fog = tile.is_fog === true;
-                
-                // 如果地块有所有者，使用玩家颜色作为主色调
-                let color;
+                let bg_color;
+                let icon_color;
+
+                // --- 2. 背景与图标颜色逻辑 ---
                 if (is_fog) {
-                    // 战争迷雾中的地块显示为暗色，但保留地形类型的区别
-                    const fog_terrain_colors = {
-                        "plain": "#1a2a1a",      // 平原 - 暗绿
-                        "base": "#1a2a1a",      // 基地 - 暗绿
-                        "tower": "#151515",     // 塔楼 - 更深的暗灰
-                        "wall": "#151515",      // 城墙 - 更深的暗灰
-                        "mountain": "#151515", // 山脉 - 更深的暗灰
-                        "swamp": "#0a2a1a"      // 沼泽 - 暗青
-                    };
-                    color = fog_terrain_colors[tile.terrain_type] || "#1a1a1a";
+                    // 迷雾中：背景深灰，线条暗黑
+                    bg_color = "#333333"; 
+                    icon_color = "rgba(0, 0, 0, 0.5)"; 
                 } else if (tile.owner_id) {
+                    // 玩家领地：背景为玩家色，线条为白色
                     const player = this.game_state.players[tile.owner_id];
-                    if (player) {
-                        // 使用玩家颜色作为地块主色调
-                        color = player.color;
-                    } else {
-                        color = terrain_colors[tile.terrain_type] || "#34495e";
-                    }
+                    bg_color = player ? player.color : "#34495e";
+                    icon_color = "#ffffff"; 
                 } else {
-                    color = terrain_colors[tile.terrain_type] || "#34495e";
+                    // 可见中立区：背景为地形色，线条为黑色 (参考图风格)
+                    bg_color = terrain_colors[tile.terrain_type] || "#d3d3d3";
+                    icon_color = "rgba(0, 0, 0, 0.7)"; 
                 }
-                
-                // 绘制地块
-                this.ctx.fillStyle = color;
+
+                // 绘制背景
+                this.ctx.fillStyle = bg_color;
                 this.ctx.fillRect(screen_x, screen_y, this.tile_size, this.tile_size);
                 
-                // 绘制边框
-                if (is_fog) {
-                    // 战争迷雾中的地块使用暗色边框
-                    this.ctx.strokeStyle = "#0a0a0a";
-                } else {
-                    this.ctx.strokeStyle = "#2c3e50";
-                }
+                // 绘制地块边框
+                this.ctx.strokeStyle = is_fog ? "#222" : "rgba(0,0,0,0.15)";
                 this.ctx.lineWidth = 1;
                 this.ctx.strokeRect(screen_x, screen_y, this.tile_size, this.tile_size);
-                
-                // 如果是基地或塔楼且有所有者，添加特殊边框标识
-                if (!is_fog && (tile.terrain_type === "base" || tile.terrain_type === "tower") && tile.owner_id) {
-                    // 己方基地和塔楼使用特殊边框
-                    if (tile.owner_id === this.player_id) {
-                        // 己方基地用金色边框，己方塔楼用银色边框
-                        this.ctx.strokeStyle = tile.terrain_type === "base" ? "#FFD700" : "#C0C0C0";
-                        this.ctx.lineWidth = 3;
-                    } else {
-                        // 敌方基地和塔楼使用相同的白色边框
-                        this.ctx.strokeStyle = "#ffffff";
-                        this.ctx.lineWidth = 2;
+
+                // --- 3. 绘制图标逻辑---
+                if (is_fog) {
+                    // 迷雾逻辑：如果不是平原，统一显示为"未知障碍" (山脉形状 + 问号)
+                    if (tile.terrain_type !== 'plain') {
+                        this.draw_terrain_icon(screen_x, screen_y, this.tile_size, "fog_obstacle", icon_color);
                     }
-                    this.ctx.strokeRect(screen_x + 2, screen_y + 2, this.tile_size - 4, this.tile_size - 4);
+                } else {
+                    // 可见逻辑：绘制对应类型的图标 (平原除外)
+                    if (tile.terrain_type !== 'plain') {
+                        this.draw_terrain_icon(screen_x, screen_y, this.tile_size, tile.terrain_type, icon_color);
+                    }
                 }
                 
-                // 绘制士兵数量（仅在非战争迷雾中显示）
+                // 特殊高亮：己方基地/塔楼
+                if (!is_fog && (tile.terrain_type === "base" || tile.terrain_type === "tower") && tile.owner_id) {
+                    if (tile.owner_id === this.player_id) {
+                        this.ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+                        this.ctx.lineWidth = 2.5;
+                        this.ctx.strokeRect(screen_x + 3, screen_y + 3, this.tile_size - 6, this.tile_size - 6);
+                    }
+                }
+
+                // --- 4. 绘制数字 ---
+                // 只有在非迷雾状态下显示数字
                 if (!is_fog) {
-                    if (tile.soldiers > 0) {
-                        // 有士兵时显示士兵数量
-                        this.ctx.fillStyle = "white";
-                        this.ctx.font = "12px Arial";
+                    let text = "";
+                    // 显示兵力逻辑
+                    if (tile.soldiers > 0) text = tile.soldiers.toString();
+                    else if (tile.owner_id) text = "0"; 
+                    // 中立塔楼/墙如果有防御值也显示
+                    else if ((tile.terrain_type === 'tower' || tile.terrain_type === 'wall') && tile.soldiers > 0) {
+                         text = tile.soldiers.toString();
+                    }
+
+                    if (text !== "") {
+                        this.ctx.fillStyle = tile.owner_id ? "white" : "rgba(0,0,0,0.8)";
+                        this.ctx.font = "bold 13px 'Microsoft YaHei', sans-serif";
                         this.ctx.textAlign = "center";
-                        this.ctx.fillText(
-                            tile.soldiers.toString(),
-                            screen_x + this.tile_size / 2,
-                            screen_y + this.tile_size / 2 + 4
-                        );
-                    } else if (tile.soldiers === 0 && tile.owner_id) {
-                        // 士兵被完全抵消但仍有所有者时，显示0
-                        this.ctx.fillStyle = "white";
-                        this.ctx.font = "12px Arial";
-                        this.ctx.textAlign = "center";
-                        this.ctx.fillText(
-                            "0",
-                            screen_x + this.tile_size / 2,
-                            screen_y + this.tile_size / 2 + 4
-                        );
-                    } else if (!tile.owner_id && tile.required_soldiers && tile.required_soldiers < 9999) {
-                        // 没有所有者且可被占领时，显示占领所需士兵数量
-                        this.ctx.fillStyle = "yellow";
-                        this.ctx.font = "10px Arial";
-                        this.ctx.textAlign = "center";
-                        this.ctx.fillText(
-                            `${tile.required_soldiers}`,
-                            screen_x + this.tile_size / 2,
-                            screen_y + this.tile_size / 2 + 4
-                        );
+                        this.ctx.textBaseline = "middle";
+                        // 简单的文字描边效果，确保可读性
+                        if (tile.owner_id) {
+                            this.ctx.shadowColor = "rgba(0,0,0,0.5)";
+                            this.ctx.shadowBlur = 3;
+                        }
+                        this.ctx.fillText(text, screen_x + this.tile_size / 2, screen_y + this.tile_size / 2 + 1);
+                        this.ctx.shadowBlur = 0;
                     }
                 }
             }
-            
+
+            draw_terrain_icon(x, y, size, type, color) {
+                this.ctx.strokeStyle = color;
+                this.ctx.fillStyle = color;
+                this.ctx.lineWidth = 2; //稍微加粗线条，更有手绘感
+                this.ctx.lineCap = "round";
+                this.ctx.lineJoin = "round"; // 圆角连接，防止山峰太尖锐
+                
+                const cx = x + size / 2;
+                const cy = y + size / 2;
+                const padding = size * 0.15; // 稍微减少内边距，让图标大一点
+                
+                this.ctx.beginPath();
+
+                // 统一处理迷雾障碍物 (修改为与山脉一致的轮廓 + 问号)
+                if (type === "fog_obstacle") {
+                    // 1. 画山脉轮廓 (双峰)
+                    this.ctx.moveTo(x + padding, y + size - padding); // 左下起点
+                    this.ctx.lineTo(x + size * 0.35, y + size * 0.4);   // 左山峰
+                    this.ctx.lineTo(x + size * 0.55, y + size * 0.65);  // 山谷
+                    this.ctx.lineTo(x + size * 0.75, y + size * 0.3);   // 右山峰 (较高)
+                    this.ctx.lineTo(x + size - padding, y + size - padding); // 右下终点
+                    this.ctx.stroke();
+
+                    // 2. 画问号 "?"
+                    this.ctx.font = "bold 16px Arial";
+                    this.ctx.textAlign = "center";
+                    this.ctx.textBaseline = "middle"; // 垂直居中
+                    this.ctx.fillStyle = color; 
+                    // 放在两个山峰之间的上方
+                    this.ctx.fillText("?", cx, y + size * 0.35);
+                    return; 
+                }
+
+                if (type === "base") {
+                    // 基地图标 (圆顶大厦) - 保持不变
+                    const by = y + size - padding;
+                    this.ctx.moveTo(x + padding, by);
+                    this.ctx.lineTo(x + size - padding, by); // 底座
+                    
+                    // 柱子
+                    this.ctx.moveTo(x + padding + 4, by);
+                    this.ctx.lineTo(x + padding + 4, by - 8);
+                    this.ctx.moveTo(x + size - padding - 4, by);
+                    this.ctx.lineTo(x + size - padding - 4, by - 8);
+                    
+                    // 横梁
+                    this.ctx.moveTo(x + padding + 2, by - 8);
+                    this.ctx.lineTo(x + size - padding - 2, by - 8);
+                    
+                    // 圆顶
+                    this.ctx.moveTo(x + padding + 4, by - 8);
+                    this.ctx.quadraticCurveTo(cx, y + padding, x + size - padding - 4, by - 8);
+                    
+                    // 顶部装饰
+                    this.ctx.moveTo(cx, y + padding + 2);
+                    this.ctx.lineTo(cx, y + padding - 2);
+                    
+                    this.ctx.stroke();
+                } 
+                else if (type === "tower") {
+                    // 塔楼图标 (Rook) - 保持不变
+                    const w = size * 0.5;
+                    const h = size * 0.6;
+                    const tx = cx - w/2;
+                    const ty = cy - h/2 + 2;
+                    
+                    // 底部
+                    this.ctx.strokeRect(tx, ty + h * 0.3, w, h * 0.7);
+                    
+                    // 顶部城垛
+                    this.ctx.moveTo(tx - 2, ty + h * 0.3); // 左檐
+                    this.ctx.lineTo(tx - 2, ty);
+                    this.ctx.lineTo(tx + w/3, ty);
+                    this.ctx.lineTo(tx + w/3, ty + 4); // 凹槽
+                    this.ctx.lineTo(tx + w*2/3, ty + 4);
+                    this.ctx.lineTo(tx + w*2/3, ty);
+                    this.ctx.lineTo(tx + w + 2, ty);
+                    this.ctx.lineTo(tx + w + 2, ty + h * 0.3); // 右檐
+                    
+                    // 门
+                    this.ctx.moveTo(cx - 3, ty + h);
+                    this.ctx.quadraticCurveTo(cx, ty + h - 8, cx + 3, ty + h);
+                    
+                    this.ctx.stroke();
+                } 
+                else if (type === "mountain") {
+                    // 山脉 (修改为 M 形连绵山峰)
+                    this.ctx.moveTo(x + padding, y + size - padding); // 左下起点
+                    this.ctx.lineTo(x + size * 0.3, y + size * 0.4);    // 第一峰 (左)
+                    this.ctx.lineTo(x + size * 0.5, y + size * 0.65);   // 山谷
+                    this.ctx.lineTo(x + size * 0.75, y + size * 0.25);  // 第二峰 (右，更高)
+                    this.ctx.lineTo(x + size - padding, y + size - padding); // 右下终点
+                    
+                    this.ctx.stroke();
+                } 
+                else if (type === "wall") {
+                    // 城墙 (砖块纹理) - 保持不变
+                    const drawSize = size - padding * 2;
+                    this.ctx.strokeRect(x + padding, y + padding + 4, drawSize, drawSize - 8);
+                    
+                    // 横线
+                    this.ctx.moveTo(x + padding, cy);
+                    this.ctx.lineTo(x + size - padding, cy);
+                    
+                    // 竖线
+                    this.ctx.moveTo(cx, y + padding + 4);
+                    this.ctx.lineTo(cx, cy);
+                    
+                    this.ctx.moveTo(x + padding + drawSize/4, cy);
+                    this.ctx.lineTo(x + padding + drawSize/4, y + size - padding - 4);
+                    
+                    this.ctx.moveTo(x + size - padding - drawSize/4, cy);
+                    this.ctx.lineTo(x + size - padding - drawSize/4, y + size - padding - 4);
+                    
+                    this.ctx.stroke();
+                } 
+                else if (type === "swamp") {
+                    // 沼泽：绘制两丛水草/芦苇
+                    // 这是一个简易的内部绘制逻辑，为了不污染外部作用域，直接写在这里
+                    const drawGrassTuft = (bx, by, scale) => {
+                        // 左叶片 (带一点弧度)
+                        this.ctx.moveTo(bx, by);
+                        this.ctx.quadraticCurveTo(bx - 4 * scale, by - 4 * scale, bx - 5 * scale, by - 10 * scale);
+                        
+                        // 中叶片 (直一点)
+                        this.ctx.moveTo(bx, by);
+                        this.ctx.lineTo(bx, by - 12 * scale);
+                        
+                        // 右叶片
+                        this.ctx.moveTo(bx, by);
+                        this.ctx.quadraticCurveTo(bx + 4 * scale, by - 4 * scale, bx + 5 * scale, by - 10 * scale);
+
+                        // 底部水平线 (表示水面/地面)
+                        this.ctx.moveTo(bx - 4 * scale, by);
+                        this.ctx.lineTo(bx + 4 * scale, by);
+                    };
+
+                    // 绘制第一丛 (偏左上，稍微小一点)
+                    drawGrassTuft(x + size * 0.35, y + size * 0.45, 0.7);
+                    
+                    // 绘制第二丛 (偏右下，稍微大一点)
+                    drawGrassTuft(x + size * 0.65, y + size * 0.75, 0.85);
+                    
+                    this.ctx.stroke();
+                }
+            }
             render_selection() {
                 const [x, y] = this.selected_tile;
                 const screen_x = x * this.tile_size;
