@@ -1173,24 +1173,52 @@
         /* 用户信息样式 */
         .user-info {
             position: absolute;
-            left: 20px;
+            left: 0px;
+            top: 0px;
             background: var(--bg-300);
             border-radius: 8px;
-            padding: 12px 20px;
+            padding: 12px;
             display: flex;
-            align-items: center;
-            gap: 15px;
+            flex-direction: column;
+            gap: 5px;
             border: 1px solid var(--bg-200);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             min-width: 280px;
             z-index: 1;
+        }
+        
+        .user-profile-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-100), var(--primary-200));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1em;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.1);
         }
         
         .user-name {
             font-weight: bold;
             color: var(--primary-200);
-            font-size: 1.1em;
-            margin-right: 5px;
+            font-size: 1em;
+            margin: 0;
+        }
+        
+        .user-action-buttons {
+            display: flex;
+            gap: 6px;
+            align-items: center;
         }
         
         .btn-small {
@@ -1639,9 +1667,15 @@
         <div class="header">
             <!-- 用户信息区域 -->
             <div class="user-info" id="userInfo" style="display: none;">
-                <span class="user-name" id="userDisplay">用户名</span>
-                <button class="btn-small" id="shopBtn">商店</button>
-                <button class="btn-small" id="logoutBtn">退出登录</button>
+                <div class="user-profile-section">
+                    <div class="user-avatar" id="userAvatar">用</div>
+                    <span class="user-name" id="userDisplay">用户名</span>
+                </div>
+                <div class="user-action-buttons">
+                    <button class="btn-small" id="statsBtn">📊 统计</button>
+                    <button class="btn-small" id="shopBtn">商店</button>
+                    <button class="btn-small" id="logoutBtn">退出登录</button>
+                </div>
             </div>
             
             <h1>
@@ -2022,8 +2056,8 @@
                 document.getElementById("shopBtn").addEventListener("click", () => this.go_to_shop());
                 
                 // 用户信息统计弹窗相关
-                document.getElementById("userDisplay").addEventListener("click", () => this.show_user_stats());
-                document.getElementById("closeUserStats").addEventListener("click", () => this.close_user_stats());
+                document.getElementById("statsBtn").addEventListener("click", () => this.show_user_stats());
+        document.getElementById("closeUserStats").addEventListener("click", () => this.close_user_stats());
                 document.getElementById("saveMusicSettings").addEventListener("click", () => this.save_music_settings());
                 
                 // 画布点击事件
@@ -2060,6 +2094,11 @@
                 // 显示用户信息区域
                 document.getElementById('userInfo').style.display = 'flex';
                 document.getElementById('userDisplay').textContent = this.username;
+                
+                // 更新用户头像
+                if (this.username && document.getElementById('userAvatar')) {
+                    document.getElementById('userAvatar').textContent = this.username.charAt(0).toUpperCase();
+                }
                 
                 // 修改登录提示区域显示用户信息
                 document.getElementById('loginPrompt').style.display = 'block';
