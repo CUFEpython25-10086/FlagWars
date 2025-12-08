@@ -1,6 +1,4 @@
 <!DOCTYPE html>
-[file name]: index.html
-[file content begin]
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -1436,112 +1434,6 @@
             background: var(--bg-100);
         }
         
-        /* AI管理相关样式 */
-        .ai-management {
-            background: linear-gradient(135deg, var(--bg-300), rgba(64, 64, 64, 0.8));
-            border-radius: 12px;
-            padding: 18px;
-            margin-top: 18px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            box-shadow: 
-                0 4px 16px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.04);
-            position: relative;
-            display: none; /* 默认隐藏，只有房主可见 */
-        }
-        
-        .ai-management::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(46, 134, 171, 0.3), transparent);
-        }
-        
-        .ai-management h3 {
-            font-size: 1.2em;
-            font-weight: 600;
-            color: var(--accent-100);
-            margin: 0 0 12px 0;
-            letter-spacing: 0.3px;
-        }
-        
-        .ai-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .ai-controls-row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        .ai-controls-row select,
-        .ai-controls-row input {
-            flex: 1;
-        }
-        
-        .ai-list {
-            margin-top: 15px;
-            max-height: 150px;
-            overflow-y: auto;
-        }
-        
-        .ai-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 12px;
-            margin: 5px 0;
-            background: linear-gradient(135deg, var(--bg-200), rgba(42, 42, 42, 0.8));
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        
-        .ai-name {
-            font-weight: 600;
-            color: var(--text-100);
-        }
-        
-        .ai-type {
-            font-size: 0.8em;
-            color: var(--text-200);
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: rgba(0, 0, 0, 0.2);
-        }
-        
-        .ai-type.aggressive {
-            background: rgba(255, 87, 51, 0.2);
-            color: var(--primary-100);
-        }
-        
-        .ai-type.defensive {
-            background: rgba(46, 134, 171, 0.2);
-            color: var(--accent-100);
-        }
-        
-        .ai-type.simple {
-            background: rgba(76, 175, 80, 0.2);
-            color: #4CAF50;
-        }
-        
-        /* 离开房间按钮样式 */
-        .leave-room-btn {
-            background: linear-gradient(135deg, #ff6b6b, #ff4757);
-            border: 2px solid #ff6b6b;
-            color: white;
-        }
-        
-        .leave-room-btn:hover {
-            background: linear-gradient(135deg, #ff4757, #ff3838);
-            border-color: #ff4757;
-        }
-        
         /* 响应式布局 */
         @media (max-width: 1200px) {
             .container {
@@ -1618,11 +1510,6 @@
             
             .music-cards-container {
                 max-height: 150px;
-            }
-            
-            .ai-controls-row {
-                flex-direction: column;
-                gap: 8px;
             }
         }
         
@@ -1834,12 +1721,8 @@
                     <div id="roomControls">
                         <button id="createRoom">创建房间</button>
                         <button id="joinRoom">加入房间</button>
-                        <button id="showRooms" style="display: none;">刷新房间列表</button>
                         <input type="text" id="roomId" placeholder="输入房间ID" style="display: none;">
-                        <div id="confirmJoinRoom" style="display: none;">
-                            <button id="confirmJoin">确认加入</button>
-                            <button id="cancelJoin" style="margin-top: 5px;">取消</button>
-                        </div>
+                        <button id="confirmJoinRoom" style="display: none;">确认加入</button>
                     </div>
                     
                     <div id="roomList" style="display: none;">
@@ -1847,35 +1730,14 @@
                         <div id="roomsList"></div>
                     </div>
                     
-                    <button id="joinGame" style="display: none;">快速开始</button>
+                    <button id="joinGame" style="display: none;">加入游戏</button>
                     <button id="readyBtn" style="display: none; background-color: #ff6b6b;">准备</button>
-                    <button id="leaveRoomBtn" class="leave-room-btn" style="display: none;">离开房间</button>
                     <div class="status" id="connectionStatus">未连接</div>
                 </div>
                 
                 <div class="room-info" id="roomInfo" style="display: none;">
                     <h3>房间信息</h3>
                     <div class="status" id="roomNumber">房间号: -</div>
-                    <p>将此房间号分享给好友加入游戏</p>
-                </div>
-                
-                <!-- AI管理区域 -->
-                <div class="ai-management" id="aiManagement">
-                    <h3>AI玩家管理</h3>
-                    <div class="ai-controls">
-                        <div class="ai-controls-row">
-                            <select id="aiType">
-                                <option value="simple">简单AI</option>
-                                <option value="aggressive">进攻型AI</option>
-                                <option value="defensive">防守型AI</option>
-                            </select>
-                            <button id="addAiBtn">添加AI</button>
-                        </div>
-                        <div id="aiList" class="ai-list">
-                            <!-- AI玩家列表将在这里动态生成 -->
-                            <p style="text-align: center; color: var(--text-200);">暂无AI玩家</p>
-                        </div>
-                    </div>
                 </div>
                 
                 <div class="controls">
@@ -2122,9 +1984,6 @@
                 this.isLoggedIn = false;
                 this.username = null;
                 
-                // 房主状态
-                this.isRoomOwner = false;
-                
                 this.canvas = document.getElementById("gameCanvas");
                 this.ctx = this.canvas.getContext("2d");
                 
@@ -2175,26 +2034,14 @@
                 // 加入房间按钮
                 document.getElementById("joinRoom").addEventListener("click", (e) => this.show_join_room_input(e));
                 
-                // 显示房间列表按钮
-                document.getElementById("showRooms").addEventListener("click", (e) => this.get_rooms_list(e));
-                
                 // 确认加入房间按钮
-                document.getElementById("confirmJoin").addEventListener("click", (e) => this.join_specific_room(e));
-                
-                // 取消加入按钮
-                document.getElementById("cancelJoin").addEventListener("click", (e) => this.cancel_join_room(e));
+                document.getElementById("confirmJoinRoom").addEventListener("click", (e) => this.join_specific_room(e));
                 
                 // 加入游戏按钮
                 document.getElementById("joinGame").addEventListener("click", (e) => this.join_game(e));
                 
                 // 准备按钮
                 document.getElementById("readyBtn").addEventListener("click", (e) => this.toggle_ready(e));
-                
-                // 离开房间按钮
-                document.getElementById("leaveRoomBtn").addEventListener("click", (e) => this.leave_room(e));
-                
-                // AI管理相关按钮
-                document.getElementById("addAiBtn").addEventListener("click", (e) => this.add_ai_player(e));
                 
                 // 音乐控制按钮
                 this.musicToggle.addEventListener("click", () => this.toggle_music());
@@ -2260,13 +2107,6 @@
                 // 启用房间创建和加入按钮
                 document.getElementById('createRoom').disabled = false;
                 document.getElementById('joinRoom').disabled = false;
-                document.getElementById('joinGame').disabled = false;
-                
-                // 显示快速开始按钮
-                document.getElementById('joinGame').style.display = 'inline-block';
-                
-                // 显示房间列表按钮
-                document.getElementById('showRooms').style.display = 'inline-block';
                 
                 // 加载用户音乐设置
                 this.load_user_music_settings();
@@ -2288,11 +2128,6 @@
                 // 禁用房间创建和加入按钮
                 document.getElementById('createRoom').disabled = true;
                 document.getElementById('joinRoom').disabled = true;
-                document.getElementById('joinGame').disabled = true;
-                document.getElementById('joinGame').style.display = 'inline-block';
-                
-                // 隐藏房间列表按钮
-                document.getElementById('showRooms').style.display = 'none';
             }
             
             // 跳转到登录页面
@@ -2429,27 +2264,6 @@
                     case 'countdown_cancelled':
                         this.handle_countdown_cancelled(data);
                         break;
-                    case 'ai_player_added':
-                        this.handle_ai_player_added(data);
-                        break;
-                    case 'ai_player_added_notification':
-                        this.handle_ai_player_added_notification(data);
-                        break;
-                    case 'ai_player_removed':
-                        this.handle_ai_player_removed(data);
-                        break;
-                    case 'ai_player_removed_notification':
-                        this.handle_ai_player_removed_notification(data);
-                        break;
-                    case 'add_ai_failed':
-                        this.handle_add_ai_failed(data);
-                        break;
-                    case 'remove_ai_failed':
-                        this.handle_remove_ai_failed(data);
-                        break;
-                    case 'leave_room_success':
-                        this.handle_leave_room_success(data);
-                        break;
                 }
             }
             
@@ -2459,9 +2273,6 @@
                 this.game_state = data.game_state;
                 this.pending_selected_tile = null; // 初始化待处理的选中位置
                 
-                // 检查是否是房主（第一个玩家）
-                this.isRoomOwner = (this.player_id === 1);
-                
                 document.getElementById("gameStatus").textContent = `游戏已加入 - 玩家 ${this.player_id}`;
                 
                 // 显示房间号
@@ -2470,18 +2281,8 @@
                     document.getElementById("roomNumber").textContent = `房间号: ${data.room_id}`;
                 }
                 
-                // 显示准备按钮和离开房间按钮
+                // 显示准备按钮
                 document.getElementById("readyBtn").style.display = "inline-block";
-                document.getElementById("leaveRoomBtn").style.display = "inline-block";
-                
-                // 隐藏房间控件
-                document.getElementById("roomControls").style.display = "none";
-                document.getElementById("roomList").style.display = "none";
-                
-                // 如果是房主，显示AI管理区域
-                if (this.isRoomOwner) {
-                    document.getElementById("aiManagement").style.display = "block";
-                }
                 
                 // 开始定期获取游戏状态
                 this.start_state_updates();
@@ -2507,7 +2308,6 @@
                 this.game_state = null;
                 this.selected_tile = null;
                 this.pending_selected_tile = null; // 重置待处理的选中位置
-                this.isRoomOwner = false;
                 
                 // 显示房间控件
                 document.getElementById("roomControls").style.display = "block";
@@ -2515,14 +2315,9 @@
                 document.getElementById("roomId").style.display = "none";
                 document.getElementById("confirmJoinRoom").style.display = "none";
                 document.getElementById("joinRoom").style.display = "block";
-                document.getElementById("showRooms").style.display = this.isLoggedIn ? "inline-block" : "none";
                 
-                // 隐藏准备按钮和离开房间按钮
+                // 隐藏准备按钮
                 document.getElementById("readyBtn").style.display = "none";
-                document.getElementById("leaveRoomBtn").style.display = "none";
-                
-                // 隐藏AI管理区域
-                document.getElementById("aiManagement").style.display = "none";
                 
                 // 停止定期获取游戏状态
                 this.stop_state_updates();
@@ -2532,25 +2327,21 @@
             }
             
             handle_join_room_failed(data) {
-                const { message } = data;
-                alert(`加入房间失败: ${message}`);
-                document.getElementById("gameStatus").textContent = `加入房间失败: ${message}`;
+                const { reason } = data;
+                alert(`加入房间失败: ${reason}`);
+                document.getElementById("gameStatus").textContent = `加入房间失败: ${reason}`;
                 
                 // 重新显示加入房间按钮
                 document.getElementById("roomId").style.display = "none";
                 document.getElementById("confirmJoinRoom").style.display = "none";
                 document.getElementById("joinRoom").style.display = "block";
-                document.getElementById("showRooms").style.display = this.isLoggedIn ? "inline-block" : "none";
             }
             
             handle_game_state(data) {
                 this.game_state = data.game_state;
                 
                 // 更新回合数
-                document.getElementById("gameTick").textContent = `回合: ${this.game_state.current_tick || 0}`;
-                
-                // 更新AI玩家列表显示
-                this.update_ai_player_list();
+                document.getElementById("gameTick").textContent = `回合: ${this.game_state.tick}`;
                 
                 this.render();
             }
@@ -2635,9 +2426,6 @@
                     readyBtn.textContent = "游戏已开始";
                     readyBtn.style.backgroundColor = "#95a5a6";
                     document.getElementById("gameStatus").textContent = "游戏开始！";
-                    
-                    // 游戏开始后隐藏AI管理区域
-                    document.getElementById("aiManagement").style.display = "none";
                 } else {
                     // 游戏未开始，允许切换准备状态
                     readyBtn.disabled = false;
@@ -2679,9 +2467,6 @@
                 readyBtn.textContent = "游戏已开始";
                 readyBtn.style.backgroundColor = "#95a5a6";
                 
-                // 游戏开始后隐藏AI管理区域
-                document.getElementById("aiManagement").style.display = "none";
-                
                 this.render();
             }
             
@@ -2696,11 +2481,6 @@
                 document.getElementById("readyBtn").textContent = "准备";
                 document.getElementById("readyBtn").style.backgroundColor = "#ff6b6b";
                 document.getElementById("readyBtn").disabled = false;  // 重置准备按钮为可点击状态
-                
-                // 如果是房主，重新显示AI管理区域
-                if (this.isRoomOwner) {
-                    document.getElementById("aiManagement").style.display = "block";
-                }
                 
                 // 游戏重置后隐藏排行榜
                 document.getElementById("leaderboardContainer").style.display = "none";
@@ -2840,7 +2620,6 @@
                 this.game_state = null;
                 this.selected_tile = null;
                 this.pending_selected_tile = null; // 重置待处理的选中位置
-                this.isRoomOwner = false;
                 
                 // 显示房间控件
                 document.getElementById("roomControls").style.display = "block";
@@ -2848,12 +2627,9 @@
                 document.getElementById("roomId").style.display = "none";
                 document.getElementById("confirmJoinRoom").style.display = "none";
                 document.getElementById("joinRoom").style.display = "block";
-                document.getElementById("showRooms").style.display = this.isLoggedIn ? "inline-block" : "none";
                 
-                // 隐藏准备按钮、离开房间按钮和AI管理区域
+                // 隐藏准备按钮
                 document.getElementById("readyBtn").style.display = "none";
-                document.getElementById("leaveRoomBtn").style.display = "none";
-                document.getElementById("aiManagement").style.display = "none";
                 
                 // 停止定期获取游戏状态
                 this.stop_state_updates();
@@ -3072,10 +2848,7 @@
                     colorIndicator.style.marginRight = "8px";
                     
                     playerInfo.appendChild(colorIndicator);
-                    
-                    // 添加AI标识
-                    const playerNameText = player.is_ai ? `${player.name} 🤖` : player.name;
-                    playerInfo.appendChild(document.createTextNode(playerNameText));
+                    playerInfo.appendChild(document.createTextNode(player.name));
                     
                     // 玩家状态
                     const playerStatus = document.createElement("div");
@@ -3661,49 +3434,8 @@
                 document.getElementById("roomId").style.display = "block";
                 document.getElementById("confirmJoinRoom").style.display = "block";
                 
-                // 隐藏加入房间按钮和刷新房间列表按钮
+                // 隐藏加入房间按钮
                 document.getElementById("joinRoom").style.display = "none";
-                document.getElementById("showRooms").style.display = "none";
-                
-                // 隐藏房间列表
-                document.getElementById("roomList").style.display = "none";
-            }
-            
-            // 取消加入房间
-            cancel_join_room(event) {
-                // 隐藏房间ID输入框和确认按钮
-                document.getElementById("roomId").style.display = "none";
-                document.getElementById("confirmJoinRoom").style.display = "none";
-                
-                // 显示加入房间按钮和刷新房间列表按钮
-                document.getElementById("joinRoom").style.display = "block";
-                document.getElementById("showRooms").style.display = this.isLoggedIn ? "inline-block" : "none";
-                
-                // 清空输入框
-                document.getElementById("roomId").value = "";
-            }
-            
-            // 获取房间列表
-            get_rooms_list(event) {
-                if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-                    // 如果未连接，先连接到服务器
-                    this.join_game();
-                    setTimeout(() => {
-                        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                            this.send_get_rooms_request();
-                        }
-                    }, 1000);
-                } else {
-                    this.send_get_rooms_request();
-                }
-            }
-            
-            // 发送获取房间列表请求
-            send_get_rooms_request() {
-                const get_rooms_message = {
-                    "type": "get_rooms"
-                };
-                this.ws.send(JSON.stringify(get_rooms_message));
             }
             
             // 加入指定房间
@@ -3768,9 +3500,6 @@
                 this.game_state = data.game_state;
                 this.pending_selected_tile = null; // 初始化待处理的选中位置
                 
-                // 检查是否是房主（第一个玩家）
-                this.isRoomOwner = (this.player_id === 1);
-                
                 document.getElementById("gameStatus").textContent = `房间创建成功 - 房间ID: ${data.room_id}`;
                 
                 // 显示房间号
@@ -3781,14 +3510,8 @@
                 document.getElementById("roomControls").style.display = "none";
                 document.getElementById("roomList").style.display = "none";
                 
-                // 显示准备按钮和离开房间按钮
+                // 显示准备按钮
                 document.getElementById("readyBtn").style.display = "inline-block";
-                document.getElementById("leaveRoomBtn").style.display = "inline-block";
-                
-                // 如果是房主，显示AI管理区域
-                if (this.isRoomOwner) {
-                    document.getElementById("aiManagement").style.display = "block";
-                }
                 
                 // 开始定期获取游戏状态
                 this.start_state_updates();
@@ -3801,9 +3524,6 @@
                 this.game_state = data.game_state;
                 this.pending_selected_tile = null; // 初始化待处理的选中位置
                 
-                // 检查是否是房主（第一个玩家）
-                this.isRoomOwner = (this.player_id === 1);
-                
                 document.getElementById("gameStatus").textContent = `房间加入成功 - 房间ID: ${data.room_id}`;
                 
                 // 显示房间号
@@ -3814,14 +3534,8 @@
                 document.getElementById("roomControls").style.display = "none";
                 document.getElementById("roomList").style.display = "none";
                 
-                // 显示准备按钮和离开房间按钮
+                // 显示准备按钮
                 document.getElementById("readyBtn").style.display = "inline-block";
-                document.getElementById("leaveRoomBtn").style.display = "inline-block";
-                
-                // 如果是房主，显示AI管理区域
-                if (this.isRoomOwner) {
-                    document.getElementById("aiManagement").style.display = "block";
-                }
                 
                 // 开始定期获取游戏状态
                 this.start_state_updates();
@@ -3835,42 +3549,31 @@
                 // 清空房间列表
                 roomsList.innerHTML = "";
                 
-                if (Object.keys(rooms).length === 0) {
-                    roomsList.innerHTML = "<p style='text-align: center; color: var(--text-200);'>暂无可用房间</p>";
+                if (rooms.length === 0) {
+                    roomsList.innerHTML = "<p>暂无可用房间</p>";
                 } else {
                     // 创建房间列表
-                    const ul = document.createElement("div");
+                    const ul = document.createElement("ul");
+                    ul.style.listStyleType = "none";
+                    ul.style.padding = "0";
                     
-                    Object.entries(rooms).forEach(([room_id, room]) => {
-                        const roomDiv = document.createElement("div");
-                        roomDiv.className = "room-item";
-                        roomDiv.style.marginBottom = "10px";
-                        roomDiv.style.padding = "12px";
-                        roomDiv.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
-                        roomDiv.style.borderRadius = "8px";
-                        roomDiv.style.border = "1px solid rgba(255, 255, 255, 0.1)";
+                    rooms.forEach(room => {
+                        const li = document.createElement("li");
+                        li.style.marginBottom = "10px";
+                        li.style.padding = "10px";
+                        li.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                        li.style.borderRadius = "5px";
                         
                         const roomInfo = document.createElement("div");
                         roomInfo.innerHTML = `
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <strong style="color: var(--accent-100);">房间 ${room_id}</strong>
-                                    <div style="font-size: 0.9em; color: var(--text-200); margin-top: 4px;">
-                                        玩家: ${room.player_count}/8 (AI: ${room.ai_player_count || 0})
-                                    </div>
-                                </div>
-                                <div style="font-size: 0.85em; padding: 3px 8px; border-radius: 4px; 
-                                            background: ${room.status === 'waiting' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)'}; 
-                                            color: ${room.status === 'waiting' ? '#4CAF50' : '#f44336'};">
-                                    ${room.status === 'waiting' ? '等待中' : '游戏中'}
-                                </div>
-                            </div>
+                            <strong>房间ID: ${room.room_id}</strong><br>
+                            玩家数: ${room.player_count}/8<br>
+                            状态: ${room.game_started ? "游戏中" : "等待中"}
                         `;
                         
                         const joinButton = document.createElement("button");
                         joinButton.textContent = "加入";
-                        joinButton.style.marginTop = "8px";
-                        joinButton.style.width = "100%";
+                        joinButton.style.marginTop = "5px";
                         joinButton.addEventListener("click", () => {
                             // 检查用户是否已登录
                             if (!this.isLoggedIn) {
@@ -3879,24 +3582,16 @@
                             }
                             
                             // 设置房间ID并加入
-                            document.getElementById("roomId").value = room_id;
+                            document.getElementById("roomId").value = room.room_id;
                             this.join_specific_room();
                         });
                         
-                        roomDiv.appendChild(roomInfo);
-                        if (room.status === 'waiting' && room.player_count < 8) {
-                            roomDiv.appendChild(joinButton);
-                        } else if (room.status === 'in_progress') {
-                            const statusText = document.createElement("div");
-                            statusText.textContent = "游戏进行中，无法加入";
-                            statusText.style.fontSize = "0.85em";
-                            statusText.style.color = "var(--text-200)";
-                            statusText.style.textAlign = "center";
-                            statusText.style.marginTop = "8px";
-                            roomDiv.appendChild(statusText);
+                        li.appendChild(roomInfo);
+                        if (!room.game_started && room.player_count < 8) {
+                            li.appendChild(joinButton);
                         }
                         
-                        ul.appendChild(roomDiv);
+                        ul.appendChild(li);
                     });
                     
                     roomsList.appendChild(ul);
@@ -3904,232 +3599,6 @@
                 
                 // 显示房间列表
                 document.getElementById("roomList").style.display = "block";
-            }
-            
-            // 离开房间
-            leave_room(event) {
-                if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-                    document.getElementById("gameStatus").textContent = "连接已断开";
-                    return;
-                }
-                
-                const leave_message = {
-                    "type": "leave_room"
-                };
-                
-                this.ws.send(JSON.stringify(leave_message));
-                document.getElementById("gameStatus").textContent = "正在离开房间...";
-            }
-            
-            // 处理离开房间成功
-            handle_leave_room_success(data) {
-                document.getElementById("gameStatus").textContent = data.message;
-                
-                // 重置游戏状态
-                this.game_id = null;
-                this.player_id = null;
-                this.game_state = null;
-                this.selected_tile = null;
-                this.pending_selected_tile = null;
-                this.isRoomOwner = false;
-                
-                // 显示房间控件
-                document.getElementById("roomControls").style.display = "block";
-                document.getElementById("roomList").style.display = "none";
-                document.getElementById("roomId").style.display = "none";
-                document.getElementById("confirmJoinRoom").style.display = "none";
-                document.getElementById("joinRoom").style.display = "block";
-                document.getElementById("showRooms").style.display = this.isLoggedIn ? "inline-block" : "none";
-                
-                // 隐藏房间信息
-                document.getElementById("roomInfo").style.display = "none";
-                
-                // 隐藏准备按钮、离开房间按钮和AI管理区域
-                document.getElementById("readyBtn").style.display = "none";
-                document.getElementById("leaveRoomBtn").style.display = "none";
-                document.getElementById("aiManagement").style.display = "none";
-                
-                // 停止定期获取游戏状态
-                this.stop_state_updates();
-                
-                // 重新渲染空画布
-                this.render();
-            }
-            
-            // 添加AI玩家
-            add_ai_player(event) {
-                if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-                    document.getElementById("gameStatus").textContent = "连接已断开";
-                    return;
-                }
-                
-                // 检查是否是房主
-                if (!this.isRoomOwner) {
-                    document.getElementById("gameStatus").textContent = "只有房主可以添加AI玩家";
-                    return;
-                }
-                
-                // 获取AI类型
-                const aiType = document.getElementById("aiType").value;
-                
-                // 根据AI类型设置攻击性
-                let aggression = 0.6;
-                let aiName = "AI玩家";
-                
-                if (aiType === 'aggressive') {
-                    aggression = 0.8;
-                    aiName = "进攻型AI";
-                } else if (aiType === 'defensive') {
-                    aggression = 0.3;
-                    aiName = "防守型AI";
-                } else {
-                    aiName = "简单AI";
-                }
-                
-                const add_ai_message = {
-                    "type": "add_ai_player",
-                    "ai_name": aiName,
-                    "aggression": aggression,
-                    "ai_type": aiType
-                };
-                
-                this.ws.send(JSON.stringify(add_ai_message));
-                document.getElementById("gameStatus").textContent = "正在添加AI玩家...";
-            }
-            
-            // 处理AI玩家添加成功
-            handle_ai_player_added(data) {
-                document.getElementById("gameStatus").textContent = data.message;
-                this.game_state = data.game_state;
-                
-                // 更新AI玩家列表
-                this.update_ai_player_list();
-            }
-            
-            // 处理AI玩家添加通知
-            handle_ai_player_added_notification(data) {
-                console.log(`AI玩家 ${data.ai_name} 已加入游戏`);
-                this.game_state = data.game_state;
-                
-                // 更新AI玩家列表
-                this.update_ai_player_list();
-            }
-            
-            // 移除AI玩家
-            remove_ai_player(ai_player_id) {
-                if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-                    document.getElementById("gameStatus").textContent = "连接已断开";
-                    return;
-                }
-                
-                // 检查是否是房主
-                if (!this.isRoomOwner) {
-                    document.getElementById("gameStatus").textContent = "只有房主可以移除AI玩家";
-                    return;
-                }
-                
-                const remove_ai_message = {
-                    "type": "remove_ai_player",
-                    "ai_player_id": ai_player_id
-                };
-                
-                this.ws.send(JSON.stringify(remove_ai_message));
-                document.getElementById("gameStatus").textContent = "正在移除AI玩家...";
-            }
-            
-            // 处理AI玩家移除成功
-            handle_ai_player_removed(data) {
-                document.getElementById("gameStatus").textContent = data.message;
-                this.game_state = data.game_state;
-                
-                // 更新AI玩家列表
-                this.update_ai_player_list();
-            }
-            
-            // 处理AI玩家移除通知
-            handle_ai_player_removed_notification(data) {
-                console.log(`AI玩家 ${data.ai_player_id} 已移除`);
-                this.game_state = data.game_state;
-                
-                // 更新AI玩家列表
-                this.update_ai_player_list();
-            }
-            
-            // 处理添加AI失败
-            handle_add_ai_failed(data) {
-                document.getElementById("gameStatus").textContent = `添加AI失败: ${data.message}`;
-            }
-            
-            // 处理移除AI失败
-            handle_remove_ai_failed(data) {
-                document.getElementById("gameStatus").textContent = `移除AI失败: ${data.message}`;
-            }
-            
-            // 更新AI玩家列表显示
-            update_ai_player_list() {
-                if (!this.game_state || !this.game_state.ai_players) {
-                    document.getElementById("aiList").innerHTML = "<p style='text-align: center; color: var(--text-200);'>暂无AI玩家</p>";
-                    return;
-                }
-                
-                const aiList = document.getElementById("aiList");
-                aiList.innerHTML = "";
-                
-                if (this.game_state.ai_players.length === 0) {
-                    aiList.innerHTML = "<p style='text-align: center; color: var(--text-200);'>暂无AI玩家</p>";
-                    return;
-                }
-                
-                // 创建AI玩家列表
-                this.game_state.ai_players.forEach(ai => {
-                    const aiDiv = document.createElement("div");
-                    aiDiv.className = "ai-item";
-                    
-                    // AI名称
-                    const aiName = document.createElement("div");
-                    aiName.className = "ai-name";
-                    aiName.textContent = ai.name;
-                    
-                    // AI类型
-                    const aiType = document.createElement("div");
-                    aiType.className = "ai-type";
-                    
-                    // 根据攻击性判断AI类型
-                    if (ai.aggression >= 0.7) {
-                        aiType.textContent = "进攻型";
-                        aiType.classList.add("aggressive");
-                    } else if (ai.aggression <= 0.4) {
-                        aiType.textContent = "防守型";
-                        aiType.classList.add("defensive");
-                    } else {
-                        aiType.textContent = "简单型";
-                        aiType.classList.add("simple");
-                    }
-                    
-                    // 移除按钮
-                    const removeBtn = document.createElement("button");
-                    removeBtn.textContent = "移除";
-                    removeBtn.style.padding = "4px 8px";
-                    removeBtn.style.fontSize = "0.8em";
-                    removeBtn.style.background = "var(--primary-100)";
-                    removeBtn.style.border = "none";
-                    removeBtn.style.borderRadius = "4px";
-                    removeBtn.style.color = "white";
-                    removeBtn.style.cursor = "pointer";
-                    removeBtn.addEventListener("click", () => {
-                        this.remove_ai_player(ai.player_id);
-                    });
-                    
-                    aiDiv.appendChild(aiName);
-                    aiDiv.appendChild(aiType);
-                    
-                    // 只有房主可以移除AI
-                    if (this.isRoomOwner && !this.game_state.game_started) {
-                        aiDiv.appendChild(removeBtn);
-                    }
-                    
-                    aiList.appendChild(aiDiv);
-                });
             }
             
             // 初始化音乐
@@ -4753,4 +4222,3 @@
     </script>
 </body>
 </html>
-[file content end]
