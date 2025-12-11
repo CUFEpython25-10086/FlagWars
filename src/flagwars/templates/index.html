@@ -977,6 +977,33 @@
             overflow: auto;
         }
         
+        /* 欢迎弹窗动画样式 */
+        .welcome-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            overflow: auto;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .welcome-modal.show {
+            display: flex;
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .welcome-modal.hide {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        
         .tutorial-content {
             background: var(--bg-200);
             margin: 5% auto;
@@ -1962,7 +1989,7 @@
     </div>
     
     <!-- 欢迎弹窗 -->
-    <div id="welcomeModal" class="tutorial-modal" style="display: flex;">
+    <div id="welcomeModal" class="welcome-modal" style="display: flex;">
         <div class="tutorial-content welcome-content">
             <div class="tutorial-header">
                 <h1 class="welcome-title">🏴 FlagWars 🏴</h1>
@@ -2282,12 +2309,11 @@
                 document.getElementById('createRoom').disabled = false;
                 document.getElementById('joinRoom').disabled = false;
                 
-                // 用户已登录，隐藏欢迎弹窗并清除标记
+                // 用户已登录，隐藏欢迎弹窗（现在不再使用 localStorage 标记）
                 const welcomeModal = document.getElementById('welcomeModal');
                 if (welcomeModal) {
                     welcomeModal.style.display = 'none';
                 }
-                localStorage.setItem('flagwars_welcome_dismissed', 'true');
                 
                 // 加载用户音乐设置
                 this.load_user_music_settings();
@@ -2334,8 +2360,7 @@
                     if (response.ok) {
                         this.isLoggedIn = false;
                         this.username = null;
-                        // 退出登录时清除欢迎弹窗标记，下次访问时会再次显示
-                        localStorage.removeItem('flagwars_welcome_dismissed');
+                        // 现在不再使用 localStorage 标记，直接更新 UI
                         this.update_ui_for_logged_out_user();
                     } else {
                         console.error('退出登录失败');
@@ -4427,24 +4452,53 @@
         
         // 检查是否需要显示欢迎弹窗
         function shouldShowWelcome() {
-            // 如果用户已经登录，不显示欢迎弹窗
+            // 只有已登录用户不显示欢迎弹窗
             const isLoggedIn = window.gameClient && window.gameClient.isLoggedIn;
-            const hasSeenWelcome = localStorage.getItem('flagwars_welcome_dismissed');
-            return !isLoggedIn && !hasSeenWelcome;
+            return !isLoggedIn; // 简化为只检查登录状态，不再检查本地存储标记
         }
         
-        // 隐藏欢迎弹窗
+        // 显示欢迎弹窗（带动画）
+        function showWelcomeModal() {
+            const welcomeModal = document.getElementById('welcomeModal');
+            if (welcomeModal) {
+                // 先设置初始状态
+                welcomeModal.style.display = 'flex';
+                welcomeModal.classList.remove('hide');
+                welcomeModal.classList.add('show');
+            }
+        }
+        
+        // 隐藏欢迎弹窗（带动画）
         function hideWelcomeModal() {
             const welcomeModal = document.getElementById('welcomeModal');
             if (welcomeModal) {
-                welcomeModal.style.display = 'none';
-                localStorage.setItem('flagwars_welcome_dismissed', 'true');
+                welcomeModal.classList.remove('show');
+                welcomeModal.classList.add('hide');
+                
+                // 等待动画完成后隐藏元素
+                setTimeout(() => {
+                    welcomeModal.style.display = 'none';
+                    welcomeModal.classList.remove('hide');
+                    localStorage.setItem('flagwars_welcome_dismissed', 'true');
+                }, 400); // 与CSS动画持续时间保持一致
             }
         }
         
         // 暂不登录
         function playAsGuest() {
-            hideWelcomeModal();
+            // 直接隐藏弹窗，不设置 localStorage 标记，这样下次访问时仍然会显示弹窗
+            const welcomeModal = document.getElementById('welcomeModal');
+            if (welcomeModal) {
+                welcomeModal.classList.remove('show');
+                welcomeModal.classList.add('hide');
+                
+                // 等待动画完成后隐藏元素，但不设置标记
+                setTimeout(() => {
+                    welcomeModal.style.display = 'none';
+                    welcomeModal.classList.remove('hide');
+                    // 不设置 localStorage 标记，保持下次访问时继续显示弹窗
+                }, 400);
+            }
         }
         
         // 跳转到登录页面
@@ -4498,15 +4552,12 @@
             // 启动游戏并保存到全局变量
             window.gameClient = new FlagWarsClient();
             
-            // 页面启动后检查是否需要显示欢迎弹窗
+            // 等待游戏客户端初始化完成，然后检查是否需要显示欢迎弹窗
             setTimeout(() => {
                 if (shouldShowWelcome()) {
-                    const welcomeModal = document.getElementById('welcomeModal');
-                    if (welcomeModal) {
-                        welcomeModal.style.display = 'flex';
-                    }
+                    showWelcomeModal();
                 }
-            }, 1500); // 延迟1.5秒显示，确保登录状态检查完成
+            }, 500); // 延迟0.5秒显示，确保登录状态检查完成
         });
     </script>
 </body>
