@@ -201,7 +201,7 @@ class CheckAuthHandler(BaseHandler):
                 self.write_json({
                     'authenticated': False
                 })
-                
+          
         except Exception as e:
             logging.error(f"检查认证状态错误: {str(e)}")
             self.write_json({

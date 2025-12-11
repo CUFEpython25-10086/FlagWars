@@ -1,9 +1,26 @@
-"""FlagWars游戏服务器 - 基于Tornado"""
+"""
+FlagWars游戏服务器 - 基于Tornado
+
+这是FlagWars多人夺旗游戏的核心服务器模块，负责：
+1. WebSocket通信处理 - 与客户端进行实时通信
+2. 游戏状态管理 - 管理游戏房间、玩家状态和游戏逻辑
+3. 房间系统 - 创建、加入、管理游戏房间
+4. 实时游戏更新 - 处理游戏中的各种操作和状态同步
+
+主要组件：
+- GameWebSocketHandler: 处理WebSocket连接和客户端消息
+- GameManager: 管理游戏逻辑、房间和玩家状态
+- 各种消息处理方法: 处理客户端发送的不同类型消息
+
+作者: FlagWars开发团队
+版本: 1.0.0
+"""
+
 import json
 import logging
 import asyncio
 import time
-from typing import Dict, Set
+from typing import Dict, Set, Any
 from tornado import web, websocket, ioloop, httpserver
 
 from .models import GameState, Player
@@ -12,36 +29,117 @@ from .auth import auth_routes
 
 
 class GameWebSocketHandler(websocket.WebSocketHandler):
-    """WebSocket处理器，处理游戏通信"""
+    """
+    WebSocket连接处理器 - 负责与客户端的实时通信
     
-    def initialize(self, game_manager):
-        self.game_manager = game_manager
-        self.player_id = None
-        self.game_id = None
-        self.user_id = None  # 添加用户ID
+    该类是Tornado WebSocket处理器的子类，专门用于处理FlagWars游戏的
+    实时通信需求。每个WebSocket连接对应一个客户端连接。
     
-    def open(self):
-        """WebSocket连接建立"""
-        logging.info("WebSocket连接建立")
+    主要功能：
+    1. 处理客户端连接和断开
+    2. 解析和路由客户端消息
+    3. 管理玩家会话状态
+    4. 与GameManager协作处理游戏逻辑
+    5. 发送游戏状态更新给客户端
+    
+    消息类型：
+    - create_room: 创建新游戏房间
+    - join_room: 加入指定房间
+    - join_game: 加入游戏（自动创建或加入房间）
+    - get_rooms: 获取可用房间列表
+    - player_ready: 设置玩家准备状态
+    - move_soldiers: 移动士兵
+    - get_game_state: 获取当前游戏状态
+    - play_again: 重新开始游戏
+    
+    属性:
+        game_manager: GameManager实例，用于处理游戏逻辑
+        player_id: 当前玩家的唯一标识符
+        game_id: 当前游戏房间的标识符
+        user_id: 登录用户的数据库ID（如果已登录）
+    """
+    
+    def initialize(self, game_manager: 'GameManager') -> None:
+        """
+        初始化WebSocket处理器
         
-        # 检查会话令牌
+        Args:
+            game_manager: 游戏管理器实例，用于处理游戏逻辑
+        """
+        self.game_manager = game_manager
+        self.player_id = None  # 玩家在当前游戏中的ID
+        self.game_id = None    # 当前游戏房间ID
+        self.user_id = None    # 登录用户的数据库ID
+    
+    def open(self) -> None:
+        """
+        WebSocket连接建立时的回调方法
+        
+        当客户端与服务器建立WebSocket连接时调用此方法。
+        主要职责：
+        1. 验证用户会话（如果有登录状态）
+        2. 记录连接日志
+        3. 初始化用户状态
+        
+        注意：
+        - 匿名用户也可以建立连接
+        - 已登录用户的会话会被验证
+        """
+        logging.info("🔗 WebSocket连接建立")
+        
+        # 检查客户端是否提供了会话令牌（登录状态验证）
         session_token = self.get_cookie("session_token")
         if session_token:
             user = db.verify_session(session_token)
             if user:
                 self.user_id = user['id']
-                logging.info(f"用户 {user['username']} (ID: {user['id']}) 已连接")
+                logging.info(f"👤 用户 {user['username']} (ID: {user['id']}) 已连接")
             else:
-                logging.warning("无效的会话令牌")
+                logging.warning("⚠️ 无效的会话令牌")
         else:
-            logging.info("匿名用户连接")
+            logging.info("👤 匿名用户连接")
     
-    def on_message(self, message):
-        """处理客户端消息"""
+    def on_message(self, message: str) -> None:
+        """
+        处理客户端发送的WebSocket消息
+        
+        这是WebSocket通信的核心方法，负责接收和路由客户端消息。
+        支持的消息类型包括房间管理、游戏操作和状态查询等。
+        
+        消息路由：
+        - join_game: 加入游戏（自动创建或加入房间）
+        - create_room: 创建新游戏房间
+        - join_room: 加入指定房间
+        - get_rooms: 获取可用房间列表
+        - player_ready: 设置玩家准备状态
+        - move_soldiers: 移动士兵
+        - get_game_state: 获取当前游戏状态
+        - play_again: 重新开始游戏
+        
+        Args:
+            message: 客户端发送的JSON格式消息字符串
+            
+        消息格式:
+            {
+                "type": "消息类型",
+                "data": {消息数据}
+            }
+            
+        错误处理:
+            - JSON格式错误：记录错误日志，返回错误消息
+            - 未知消息类型：记录警告日志，返回错误消息
+            - 其他异常：记录错误日志，返回通用错误消息
+            
+        注意：
+        - 该方法是异步的，但不需要显式标记为async
+        - 错误发生时需要向客户端发送错误反馈
+        """
         try:
+            # 解析客户端发送的JSON消息
             data = json.loads(message)
             message_type = data.get('type')
             
+            # 根据消息类型路由到对应的处理方法
             if message_type == 'join_game':
                 self._handle_join_game(data)
             elif message_type == 'create_room':
@@ -59,33 +157,61 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
             elif message_type == 'play_again':
                 self._handle_play_again()
             else:
-                logging.warning(f"未知消息类型: {message_type}")
+                logging.warning(f"⚠️ 未知消息类型: {message_type}")
                 self.send_error(f"未知消息类型: {message_type}")
             
         except json.JSONDecodeError:
-            logging.error(f"JSON解析错误: {message}")
-            self.send_error("消息格式错误")
+            logging.error(f"❌ JSON解析错误: {message}")
+            self.send_error("消息格式错误，请发送有效的JSON")
         except Exception as e:
-            logging.error(f"处理消息时发生错误: {str(e)}", exc_info=True)
-            self.send_error("服务器内部错误")
+            logging.error(f"💥 处理消息时发生错误: {str(e)}", exc_info=True)
+            self.send_error("处理消息时发生内部错误")
     
-    def _handle_create_room(self, data):
-        """处理创建房间请求"""
+    def _handle_create_room(self, data: Dict[str, Any]) -> None:
+        """
+        处理创建房间请求
+        
+        该方法处理客户端创建新游戏房间的请求。创建房间后，
+        创建者会自动加入该房间并成为房主。
+        
+        流程：
+        1. 获取玩家名称（优先使用已登录用户名）
+        2. 通过GameManager创建新房间
+        3. 房主自动加入房间
+        4. 建立WebSocket连接映射
+        5. 向客户端发送房间创建成功的响应
+        
+        Args:
+            data: 客户端发送的消息数据，包含玩家名称等信息
+                - player_name: 玩家显示名称（可选）
+        
+        响应消息:
+            - type: 'room_created'
+            - room_id: 房间唯一标识符
+            - game_id: 游戏实例ID
+            - player_id: 当前玩家在游戏中的ID
+            - game_state: 当前游戏状态
+            
+        错误响应:
+            - type: 'create_room_failed'
+            - message: 错误描述信息
+        """
         player_name = data.get('player_name', '玩家')
         
-        # 如果用户已登录，使用用户名
+        # 如果用户已登录，优先使用数据库中的用户名
         if self.user_id:
             user = db.verify_session(self.get_cookie("session_token"))
             if user:
                 player_name = user['username']
         
-        # 创建新房间
+        # 通过GameManager创建新房间
         room_id = self.game_manager.create_room()
         
-        # 加入房间
+        # 房主自动加入刚创建的房间
         game_id, player_id, error = self.game_manager.join_room(room_id, player_name, self.user_id)
         
         if error:
+            # 房间创建或加入失败，返回错误信息
             response = {
                 'type': 'create_room_failed',
                 'message': error
@@ -94,13 +220,15 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
             self.close()
             return
         
+        # 保存玩家和游戏信息到WebSocket处理器
         self.player_id = player_id
         self.game_id = game_id
         
-        # 将WebSocket处理器添加到玩家字典
+        # 将WebSocket连接添加到GameManager的玩家连接映射中
+        # 这样就可以向特定玩家发送消息
         self.game_manager.add_player_connection(game_id, player_id, self)
         
-        # 发送房间创建成功信息
+        # 发送房间创建成功响应
         response = {
             'type': 'room_created',
             'room_id': room_id,
@@ -288,26 +416,59 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
 
 
 class GameManager:
-    """游戏管理器"""
+    """
+    游戏状态管理器 - 负责整个FlagWars游戏的核心逻辑
     
-    def __init__(self):
-        self.games: Dict[str, GameState] = {}
-        self.players: Dict[str, Dict[int, GameWebSocketHandler]] = {}
-        self.connections: Dict[str, Dict[int, GameWebSocketHandler]] = {}  # 修复：添加connections属性
+    该类是游戏服务器的核心组件，负责管理：
+    1. 多房间系统 - 维护多个独立的游戏房间
+    2. 玩家管理 - 跟踪玩家状态、连接和准备状态
+    3. 游戏状态 - 管理游戏进程、计时和规则执行
+    4. 实时更新 - 定期更新游戏状态并广播给所有玩家
+    5. WebSocket连接管理 - 维护玩家与服务器的连接映射
+    
+    主要特性：
+    - 支持最多8个玩家同时游戏
+    - 每个玩家有独特的颜色标识
+    - 自动生成合理的出生点位置
+    - 游戏状态实时同步
+    - 支持游戏重置和重新开始
+    
+    属性说明：
+        games: 游戏房间映射 {room_id: GameState}
+        players: 玩家连接映射 {room_id: {player_id: handler}}
+        connections: WebSocket连接映射 {room_id: {player_id: handler}}
+        player_ready_states: 玩家准备状态 {room_id: {player_id: ready}}
+        player_user_mapping: 玩家ID与用户ID的映射
+        game_start_times: 游戏开始时间记录
+        last_broadcast_time: 最后广播时间（用于频率控制）
+        game_over_games: 已结束游戏集合
+        game_countdowns: 游戏倒计时状态
+        countdown_tasks: 倒计时任务
+        room_colors: 房间颜色使用记录
+    """
+    
+    def __init__(self) -> None:
+        """初始化游戏管理器"""
+        # 核心数据存储
+        self.games: Dict[str, GameState] = {}  # 所有游戏房间
+        self.players: Dict[str, Dict[int, GameWebSocketHandler]] = {}  # 玩家连接
+        self.connections: Dict[str, Dict[int, GameWebSocketHandler]] = {}  # WebSocket连接
         self.player_ready_states: Dict[str, Dict[int, bool]] = {}  # 玩家准备状态
-        self.player_user_mapping: Dict[int, int] = {}  # 玩家ID与用户ID的映射
+        self.player_user_mapping: Dict[int, int] = {}  # 玩家ID与用户ID映射
         self.game_start_times: Dict[str, float] = {}  # 游戏开始时间
-        self.last_broadcast_time: Dict[str, float] = {}  # 每个游戏的最后广播时间
-        self.game_over_games: Set[str] = set()  # 已结束的游戏集合
-        self.next_player_id = 1
+        self.last_broadcast_time: Dict[str, float] = {}  # 最后广播时间
+        self.game_over_games: Set[str] = set()  # 已结束游戏
+        
+        # 玩家和房间ID生成器
+        self.next_player_id = 1  # 玩家ID自增器
         self.next_room_id = 1000  # 房间ID从1000开始
         self.available_room_ids = set()  # 已释放的房间号集合
         
-        # 添加倒计时相关变量
-        self.game_countdowns: Dict[str, int] = {}  # 存储每个房间的倒计时剩余秒数
-        self.countdown_tasks: Dict[str, asyncio.Task] = {}  # 存储每个房间的倒计时任务
+        # 游戏控制相关
+        self.game_countdowns: Dict[str, int] = {}  # 房间倒计时状态
+        self.countdown_tasks: Dict[str, asyncio.Task] = {}  # 倒计时任务
         
-        # 预定义的8种玩家颜色
+        # 玩家颜色系统
         self.player_colors = [
             "#FF0000",  # 红色
             "#0000FF",  # 蓝色
@@ -319,26 +480,50 @@ class GameManager:
             "#800080"   # 深紫色
         ]
         
-        # 预定义的8种玩家颜色对应的英文名
         self.color_names = ["Red", "Green", "Blue", "Gold", "Magenta", "Cyan", "Orange", "Purple"]
+        self.room_colors: Dict[str, Set[str]] = {}  # 房间颜色使用记录
         
-        # 跟踪每个房间中已被使用的颜色
-        self.room_colors = {}  # {room_id: set(used_colors)}
-        
-        # 启动游戏更新循环
+        # 启动游戏主循环
         self._start_game_loop()
     
-    def _start_game_loop(self):
-        """启动游戏更新循环"""
+    def _start_game_loop(self) -> None:
+        """
+        启动游戏主循环
+        
+        创建一个异步任务，定期更新所有游戏的状态。
+        这个循环负责：
+        1. 更新游戏逻辑（如倒计时、游戏进程）
+        2. 检查游戏结束条件
+        3. 清理过期的游戏房间
+        4. 广播游戏状态更新给所有玩家
+        
+        更新频率：每0.6秒一次，既保证游戏流畅性又避免过度网络通信
+        """
         async def game_loop():
+            """异步游戏主循环"""
             while True:
                 await asyncio.sleep(0.6)  # 每0.6秒更新一次
                 self._update_all_games()
         
+        # 将循环任务添加到Tornado的IOLoop中
         ioloop.IOLoop.current().add_callback(game_loop)
     
     def create_room(self) -> str:
-        """创建新房间并返回房间ID"""
+        """
+        创建新的游戏房间
+        
+        房间创建时会：
+        1. 分配房间ID（优先使用已释放的最小ID）
+        2. 创建新的GameState实例
+        3. 初始化玩家列表和准备状态
+        
+        Returns:
+            str: 新创建的房间ID
+            
+        Note:
+            - 房间ID从1000开始递增
+            - 已关闭的房间ID会被回收使用
+        """
         # 如果有已释放的房间号，使用最小的可用房间号
         if self.available_room_ids:
             room_id_int = min(self.available_room_ids)
@@ -1143,20 +1328,20 @@ def make_app():
     return web.Application(routes, **settings)
 
 
-def main():
+def main(port: int = 8888, debug: bool = False, host: str = '0.0.0.0'):
     """主函数"""
     import argparse
     
     # 解析命令行参数
     parser = argparse.ArgumentParser(description='FlagWars游戏服务器')
-    parser.add_argument('--port', type=int, default=8888, help='服务器监听端口 (默认: 8888)')
+    parser.add_argument('--port', type=int, default=port, help='服务器监听端口 (默认: 8888)')
     args = parser.parse_args()
     
     logging.basicConfig(level=logging.INFO)
     
     app = make_app()
     server = httpserver.HTTPServer(app)
-    server.listen(args.port, address='0.0.0.0')
+    server.listen(args.port, address=host)
     
     # 获取本机IP地址
     import socket
@@ -1180,4 +1365,13 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # 解析命令行参数
+    import argparse
+    parser = argparse.ArgumentParser(description='FlagWars游戏服务器')
+    parser.add_argument('--port', type=int, default=8888, help='服务器监听端口 (默认: 8888)')
+    parser.add_argument('--debug', action='store_true', help='启用调试模式')
+    parser.add_argument('--host', type=str, default='0.0.0.0', help='服务器监听主机 (默认: 0.0.0.0)')
+    args = parser.parse_args()
+    
+    # 调用主函数并传递参数
+    main(port=args.port, debug=args.debug, host=args.host)

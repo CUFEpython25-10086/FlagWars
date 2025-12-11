@@ -1,11 +1,48 @@
-"""游戏数据模型定义"""
+"""
+游戏数据模型定义 - FlagWars核心数据结构
+
+该模块定义了FlagWars多人夺旗游戏的所有核心数据模型，包括：
+1. TerrainType: 游戏地图上的地形类型枚举
+2. Player: 玩家数据模型和状态管理
+3. Tile: 地图格子模型，包含地形、所有权和可视性
+4. GameState: 游戏整体状态管理，包含地图、玩家和游戏逻辑
+
+这些模型类是游戏服务器和客户端之间数据交换的基础，
+确保了游戏状态的一致性和可预测性。
+
+作者: FlagWars开发团队
+版本: 1.0.0
+"""
+
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 import random # 确保导入random
 
 
 class TerrainType(Enum):
-    """地形类型枚举"""
+    """
+    游戏地图地形类型枚举
+    
+    定义了FlagWars游戏地图上所有可能的地形类型。
+    不同地形具有不同的属性和游戏机制：
+    - 通行性：是否允许玩家单位通过
+    - 可占领性：是否可以被玩家占领
+    - 防御要求：占领该地形需要的士兵数量
+    - 视觉效果：客户端渲染时的颜色和样式
+    
+    地形分布策略：
+    - 平原作为基础地形，覆盖大部分地图
+    - 特殊地形随机生成，增加游戏策略性
+    - 地形之间保持合理间距，避免完全阻塞
+    
+    属性:
+        PLAIN: 平原 - 可通行，无占领要求，绿色
+        BASE: 基地 - 可通行，需10士兵，棕色（玩家出生点）
+        TOWER: 塔楼 - 可通行，需5-20随机士兵，灰色（高价值目标）
+        WALL: 城墙 - 可通行，需3士兵，深灰色（防御性地形）
+        MOUNTAIN: 山脉 - 不可通行，不可占领，深棕色（天然屏障）
+        SWAMP: 沼泽 - 可通行，无占领要求，黑色（低价值区域）
+    """
     PLAIN = "plain"  # 平原
     BASE = "base"    # 基地
     TOWER = "tower"  # 塔楼
@@ -15,23 +52,91 @@ class TerrainType(Enum):
 
 
 class Player:
-    """玩家类"""
-    def __init__(self, player_id: int, name: str, color: str):
+    """
+    玩家数据模型类
+    
+    该类封装了FlagWars游戏中玩家的所有核心属性和状态信息。
+    每个玩家实例代表游戏中的一个参与者，可以是人类玩家或AI。
+    
+    玩家生命周期：
+    1. 创建 - 加入游戏时创建Player实例
+    2. 游戏中 - 正常参与游戏，可以移动和占领地块
+    3. 被淘汰 - 失去所有地块后转为旁观者状态
+    4. 结算 - 游戏结束时记录成绩
+    
+    状态管理：
+    - 存活状态：is_alive控制玩家是否仍在游戏中
+    - 旁观模式：is_spectator控制玩家是否在观看其他玩家游戏
+    - 准备状态：ready控制玩家是否准备好开始游戏
+    - 基地位置：base_position记录玩家出生点坐标
+    
+    标识系统：
+    - player_id：游戏内唯一标识符（由GameManager分配）
+    - name：玩家显示名称（可自定义）
+    - color：玩家颜色标识（用于区分不同玩家）
+    
+    属性:
+        id: 玩家在游戏中的唯一标识符
+        name: 玩家显示名称
+        color: 玩家颜色标识（十六进制颜色码）
+        base_position: 玩家基地位置坐标 (x, y)
+        is_alive: 玩家是否仍然存活
+        is_spectator: 玩家是否在旁观模式
+        ready: 玩家是否准备好开始游戏
+    """
+    
+    def __init__(self, player_id: int, name: str, color: str) -> None:
+        """
+        初始化玩家实例
+        
+        Args:
+            player_id: 玩家在游戏中的唯一标识符
+            name: 玩家显示名称
+            color: 玩家颜色标识（十六进制颜色码，如"#FF0000"）
+        """
         self.id = player_id
         self.name = name
         self.color = color
         self.base_position: Optional[Tuple[int, int]] = None
-        self.is_alive = True
-        self.is_spectator = False
-        self.ready = False
+        self.is_alive = True  # 默认存活状态
+        self.is_spectator = False  # 默认非旁观者
+        self.ready = False  # 默认未准备
     
-    def eliminate(self):
-        """将玩家标记为已淘汰并设置为旁观者"""
+    def eliminate(self) -> None:
+        """
+        将玩家标记为已淘汰
+        
+        当玩家失去所有地块时调用此方法，将其状态从存活转为淘汰。
+        淘汰的玩家会进入旁观者模式，但仍可以观看其他玩家的游戏。
+        
+        副作用:
+            - 设置 is_alive = False
+            - 设置 is_spectator = True
+        
+        Note:
+            该方法通常在游戏逻辑检测到玩家无地块时自动调用
+        """
         self.is_alive = False
         self.is_spectator = True
     
-    def to_dict(self):
-        """将玩家信息转换为字典格式"""
+    def to_dict(self) -> Dict[str, any]:
+        """
+        将玩家信息转换为字典格式
+        
+        用于序列化玩家数据，通常用于：
+        1. 向客户端发送玩家状态更新
+        2. 保存游戏状态到数据库
+        3. 游戏结束时的成绩记录
+        
+        Returns:
+            Dict[str, any]: 包含玩家信息的字典
+                - player_id: 玩家ID
+                - name: 玩家名称
+                - color: 玩家颜色
+                - is_alive: 是否存活
+                - is_spectator: 是否为旁观者
+                - ready: 是否准备好
+        """
         return {
             "player_id": self.id,
             "name": self.name,
