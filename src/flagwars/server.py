@@ -319,6 +319,12 @@ class GameManager:
             "#800080"   # 深紫色
         ]
         
+        # 预定义的8种玩家颜色对应的英文名
+        self.color_names = ["Red", "Green", "Blue", "Gold", "Magenta", "Cyan", "Orange", "Purple"]
+        
+        # 跟踪每个房间中已被使用的颜色
+        self.room_colors = {}  # {room_id: set(used_colors)}
+        
         # 启动游戏更新循环
         self._start_game_loop()
     
@@ -383,15 +389,29 @@ class GameManager:
         player_id = self.next_player_id
         self.next_player_id += 1
         
-        # 按加入顺序分配颜色
-        player_index = len(self.players[room_id])
-        predefined_colors = ["#FF0000", "#00FF00", "#0000FF", "#DAA520", "#FF00FF", "#00FFFF", "#FFA500", "#800080"]
-        color_names = ["Red", "Green", "Blue", "Gold", "Magenta", "Cyan", "Orange", "Purple"]
-        player_color = predefined_colors[player_index % len(predefined_colors)]
+        # 初始化房间颜色跟踪（如果不存在）
+        if room_id not in self.room_colors:
+            self.room_colors[room_id] = set()
         
-        # 如果玩家使用默认名字"Player"，则改为颜色英文名
-        if player_name == "Player":
-            player_name = color_names[player_index % len(color_names)]
+        # 获取当前房间内所有已使用的颜色
+        used_colors = self.room_colors[room_id].copy()
+        
+        # 找出第一个未使用的颜色
+        player_color = None
+        
+        for i, color in enumerate(self.player_colors):
+            if color not in used_colors:
+                player_color = color
+                break
+        
+        # 如果所有颜色都已使用（理论上不会发生，因为最多8个玩家8种颜色）
+        if player_color is None:
+            # 使用轮询方式分配颜色
+            player_index = len(self.players[room_id])
+            player_color = self.player_colors[player_index % len(self.player_colors)]
+
+        # 记录这个房间使用了这个颜色
+        self.room_colors[room_id].add(player_color)
         
         player = Player(player_id, player_name, player_color)
         
@@ -447,6 +467,13 @@ class GameManager:
     def remove_player_connection(self, game_id: str, player_id: int):
         """移除玩家连接"""
         if game_id in self.players and player_id in self.players[game_id]:
+            # 获取玩家信息以便清理颜色记录
+            player = self.games[game_id].players.get(player_id)
+            
+            # 从房间颜色使用记录中移除该玩家的颜色
+            if player and game_id in self.room_colors:
+                self.room_colors[game_id].discard(player.color)
+            
             del self.players[game_id][player_id]
         if game_id in self.connections and player_id in self.connections[game_id]:
             del self.connections[game_id][player_id]
@@ -884,6 +911,10 @@ class GameManager:
         if room_id in self.game_countdowns:
             self.game_countdowns.pop(room_id, None)
         
+        # 清理房间颜色使用记录
+        if room_id in self.room_colors:
+            del self.room_colors[room_id]
+        
         if room_id in self.games:
             # 如果游戏正在进行中但未正常结束，标记为非正常结束
             game_state = self.games[room_id]
@@ -973,6 +1004,11 @@ class GameManager:
         # 保存当前玩家信息
         current_players = list(self.games[game_id].players.values())
         
+        # 重新分配颜色以避免重复
+        # 清理房间的颜色使用记录，让玩家可以重新分配颜色
+        if game_id in self.room_colors:
+            self.room_colors[game_id].clear()
+        
         # 创建新的游戏状态
         new_game_state = GameState()
         
@@ -980,11 +1016,42 @@ class GameManager:
         player_count = len(current_players)
         new_game_state.spawn_points = new_game_state.generate_random_spawn_points(player_count, min_distance=6)
         
-        # 重新添加玩家到新游戏状态
+        # 重新添加玩家到新游戏状态，分配新颜色
         for i, player in enumerate(current_players):
             # 重置玩家状态
             player.is_alive = True
             player.is_spectator = False  # 重置旁观者身份标记
+            
+            # 重新分配颜色
+            # 获取当前房间内所有已使用的颜色
+            used_colors = self.room_colors[game_id].copy() if game_id in self.room_colors else set()
+            
+            # 找出第一个未使用的颜色
+            player_color = None
+            player_color_name = None
+            
+            for color_index, color in enumerate(self.player_colors):
+                if color not in used_colors:
+                    player_color = color
+                    player_color_name = self.color_names[color_index]
+                    break
+            
+            # 如果所有颜色都已使用，使用轮询方式
+            if player_color is None:
+                player_color = self.player_colors[i % len(self.player_colors)]
+                player_color_name = self.color_names[i % len(self.color_names)]
+            
+            # 更新玩家颜色
+            player.color = player_color
+            
+            # 如果玩家名字是颜色名，也更新为对应的颜色名
+            if player.name in self.color_names:
+                player.name = player_color_name
+            
+            # 记录这个房间使用了这个颜色
+            if game_id not in self.room_colors:
+                self.room_colors[game_id] = set()
+            self.room_colors[game_id].add(player_color)
             
             # 分配基地位置
             base_x, base_y = new_game_state.spawn_points[i]
