@@ -168,11 +168,20 @@ class GameState:
                 self.tiles[y][x].required_soldiers = self.tiles[y][x]._get_required_soldiers()
                 swamps_placed += 1
     
-    def generate_random_spawn_points(self, num_players: int) -> List[Tuple[int, int]]:
+    def generate_random_spawn_points(self, num_players: int, min_distance: int = None) -> List[Tuple[int, int]]:
         """
         生成尽可能分散的玩家出生点 (使用最大化最小距离算法)
+        
+        Args:
+            num_players: 玩家数量
+            min_distance: 最小出生距离，如果为None则自动计算
         """
-        import random
+        
+        # 如果没有指定最小距离，根据地图大小自动计算
+        if min_distance is None:
+            # 地图对角线长度的一半作为最小距离，确保分布相对均匀
+            map_diagonal = (self.map_width ** 2 + self.map_height ** 2) ** 0.5
+            min_distance = max(3, int(map_diagonal / (2 * (num_players ** 0.5))))
         
         spawn_points = []
         candidates = []
@@ -200,8 +209,47 @@ class GameState:
         # 从候选列表中移除已选点
         candidates.remove(first_spawn)
         
-        # 3. 为剩余玩家寻找最佳位置
-        # 算法：遍历所有候选点，找到那个"离最近的已有出生点距离最远"的点
+        # 3. 为剩余玩家寻找最佳位置（满足最小距离要求）
+        attempts_without_improvement = 0
+        max_attempts = 1000
+        
+        while len(spawn_points) < num_players and candidates and attempts_without_improvement < max_attempts:
+            max_attempts -= 1
+            best_candidate = None
+            max_min_distance = -1
+            
+            for cand in candidates:
+                cand_x, cand_y = cand
+                
+                # 检查是否满足最小距离要求
+                min_dist_to_existing = float('inf')
+                for sp_x, sp_y in spawn_points:
+                    # 使用曼哈顿距离
+                    dist = abs(cand_x - sp_x) + abs(cand_y - sp_y)
+                    if dist < min_dist_to_existing:
+                        min_dist_to_existing = dist
+                
+                # 只有当满足最小距离要求时才考虑这个候选点
+                if min_dist_to_existing >= min_distance:
+                    # 在满足最小距离的点中，选择距离现有出生点最远的
+                    if min_dist_to_existing > max_min_distance:
+                        max_min_distance = min_dist_to_existing
+                        best_candidate = cand
+            
+            # 如果找到了满足最小距离要求的候选点
+            if best_candidate:
+                spawn_points.append(best_candidate)
+                candidates.remove(best_candidate)
+                attempts_without_improvement = 0
+            else:
+                # 没有找到满足最小距离要求的点，尝试放宽要求
+                attempts_without_improvement += 1
+                if attempts_without_improvement >= 10:  # 尝试10次后放宽要求
+                    min_distance = max(2, min_distance - 1)  # 最小距离减1，但不能小于2
+                    attempts_without_improvement = 0
+                    print(f"Warning: Reducing min_distance to {min_distance} to find valid spawn points")
+        
+        # 如果仍然找不到足够的满足条件的点，回退到原有算法
         while len(spawn_points) < num_players and candidates:
             best_candidate = None
             max_min_distance = -1
@@ -212,7 +260,7 @@ class GameState:
                 # 计算该候选点到所有已存在出生点的最近距离
                 min_dist_to_existing = float('inf')
                 for sp_x, sp_y in spawn_points:
-                    # 使用曼哈顿距离 (或者欧几里得距离)
+                    # 使用曼哈顿距离
                     dist = abs(cand_x - sp_x) + abs(cand_y - sp_y)
                     if dist < min_dist_to_existing:
                         min_dist_to_existing = dist
@@ -292,7 +340,7 @@ class GameState:
     def remove_player(self, player_id: int):
         """移除玩家"""
         if player_id in self.players:
-            player = self.players[player_id]
+            #player = self.players[player_id]
             
             # 将玩家拥有的所有地块变为中立，但保留兵力
             for row in self.tiles:

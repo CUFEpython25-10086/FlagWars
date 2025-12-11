@@ -6,9 +6,9 @@ import time
 from typing import Dict, Set
 from tornado import web, websocket, ioloop, httpserver
 
-from .models import GameState, Player, TerrainType
+from .models import GameState, Player
 from .database import db
-from .auth import BaseHandler, auth_routes
+from .auth import auth_routes
 
 
 class GameWebSocketHandler(websocket.WebSocketHandler):
@@ -412,9 +412,9 @@ class GameManager:
         
         # 如果还没有生成出生点，或者当前玩家数量超过了已生成的出生点数量
         if not hasattr(game_state, 'spawn_points') or player_index >= len(game_state.spawn_points):
-            # 根据当前玩家数量+1生成新的出生点
+            # 根据当前玩家数量+1生成新的出生点（设置最小距离为10）
             new_player_count = len(self.players[room_id]) + 1
-            game_state.spawn_points = game_state.generate_random_spawn_points(new_player_count)
+            game_state.spawn_points = game_state.generate_random_spawn_points(new_player_count, min_distance=10)
         
         # 分配出生点
         base_x, base_y = game_state.spawn_points[player_index]
@@ -976,9 +976,9 @@ class GameManager:
         # 创建新的游戏状态
         new_game_state = GameState()
         
-        # 根据实际玩家数量生成随机出生点
+        # 根据实际玩家数量生成随机出生点（设置最小距离6）
         player_count = len(current_players)
-        new_game_state.spawn_points = new_game_state.generate_random_spawn_points(player_count)
+        new_game_state.spawn_points = new_game_state.generate_random_spawn_points(player_count, min_distance=6)
         
         # 重新添加玩家到新游戏状态
         for i, player in enumerate(current_players):
