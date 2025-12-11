@@ -326,7 +326,7 @@ class GameManager:
         """启动游戏更新循环"""
         async def game_loop():
             while True:
-                await asyncio.sleep(0.8)  # 每0.8秒更新一次
+                await asyncio.sleep(0.6)  # 每0.6秒更新一次
                 self._update_all_games()
         
         ioloop.IOLoop.current().add_callback(game_loop)
