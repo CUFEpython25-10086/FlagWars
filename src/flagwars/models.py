@@ -97,7 +97,7 @@ class GameState:
         self.game_over_type = None
         
         # 添加移动箭头追踪
-        self.movement_arrows = {}  # {player_id: [{from_x, from_y, to_x, to_y, created_tick}]}
+        self.movement_arrows = {}  # {player_id: [{from_x, from_y, to_x, to_y, created_tick, move_id}]}
         
         # 初始化地图
         self._initialize_map()
@@ -338,6 +338,11 @@ class GameState:
             if moves:
                 # 取出第一个操作并执行
                 move_data = moves.pop(0)
+                
+                # 使用相同的逻辑生成move_id（在move_soldiers中使用的逻辑）
+                move_id = f"{player_id}_{move_data['from_x']}_{move_data['from_y']}_{move_data['to_x']}_{move_data['to_y']}_{move_data.get('created_tick', self.current_tick)}"
+                move_data['move_id'] = move_id
+                
                 success = self._process_move(
                     move_data['from_x'], move_data['from_y'],
                     move_data['to_x'], move_data['to_y'],
@@ -345,24 +350,19 @@ class GameState:
                 )
                 # 移动成功后，只清除与这次移动相关的箭头
                 if success and player_id in self.movement_arrows:
-                    # 只清除与这次具体移动相关的箭头
-                    self._remove_specific_arrow(
-                        player_id, 
-                        move_data['from_x'], move_data['from_y'],
-                        move_data['to_x'], move_data['to_y']
-                    )
+                    # 只清除与这次具体移动相关的箭头（通过move_id匹配）
+                    self._remove_specific_arrow(player_id, move_id)
     
-    def _remove_specific_arrow(self, player_id: int, from_x: int, from_y: int, to_x: int, to_y: int):
+    def _remove_specific_arrow(self, player_id: int, move_id: str):
         """移除与具体移动操作相关的箭头"""
         if player_id not in self.movement_arrows:
             return
         
         arrows = self.movement_arrows[player_id]
-        # 找到并移除匹配的箭头（起点和终点都匹配的箭头）
+        # 找到并移除匹配move_id的箭头
         self.movement_arrows[player_id] = [
             arrow for arrow in arrows 
-            if not (arrow['from_x'] == from_x and arrow['from_y'] == from_y and 
-                   arrow['to_x'] == to_x and arrow['to_y'] == to_y)
+            if arrow.get('move_id') != move_id
         ]
     
     def _process_move(self, from_x: int, from_y: int, to_x: int, to_y: int, player_id: int):
@@ -635,19 +635,24 @@ class GameState:
             'from_y': from_y,
             'to_x': to_x,
             'to_y': to_y,
-            'player_id': player_id
+            'player_id': player_id,
+            'created_tick': self.current_tick
         })
         
         # 添加移动箭头（仅对己方可见）
         if player_id not in self.movement_arrows:
             self.movement_arrows[player_id] = []
         
+        # 为这个移动操作生成唯一ID
+        move_id = f"{player_id}_{from_x}_{from_y}_{to_x}_{to_y}_{self.current_tick}"
+        
         self.movement_arrows[player_id].append({
             'from_x': from_x,
             'from_y': from_y,
             'to_x': to_x,
             'to_y': to_y,
-            'created_tick': self.current_tick
+            'created_tick': self.current_tick,
+            'move_id': move_id
         })
         
         return True

@@ -2011,7 +2011,7 @@
                         </div>
                         <div class="info-item">
                             <span class="info-icon">🎯</span>
-                            <span>使用方向键移动士兵</span>
+                            <span>使用方向键或WASD键移动士兵</span>
                         </div>
                         <div class="info-item">
                             <span class="info-icon">🏰</span>
@@ -2074,7 +2074,7 @@
                     <h3>🎯 基础操作</h3>
                     <ul>
                         <li><strong>选择单位</strong>：点击你有士兵的地块</li>
-                        <li><strong>移动指令</strong>：使用方向键移动</li>
+                        <li><strong>移动指令</strong>：使用方向键或WASD键移动</li>
                         <li><strong>占领地块</strong>：将士兵移动到敌方或中立地块</li>
                     </ul>
                 </div>
@@ -2944,15 +2944,23 @@
                 
                 switch(event.key) {
                     case "ArrowUp":
+                    case "w":
+                    case "W":
                         new_y = y - 1;
                         break;
                     case "ArrowDown":
+                    case "s":
+                    case "S":
                         new_y = y + 1;
                         break;
                     case "ArrowLeft":
+                    case "a":
+                    case "A":
                         new_x = x - 1;
                         break;
                     case "ArrowRight":
+                    case "d":
+                    case "D":
                         new_x = x + 1;
                         break;
                     default:

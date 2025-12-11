@@ -25,7 +25,7 @@ There are various terrain types in the game, including:
 6. **Swamp**: Swamps are passable terrain. They are randomly generated naturally in the game. Swamps reduce soldiers standing on them by one soldier per game tick.
 
 ## Gameplay
-Players can use the mouse pointer to select their soldiers. Selected soldiers will be highlighted. Use arrow keys to plan soldier movement.
+Players can use the mouse pointer to select their soldiers. Selected soldiers will be highlighted. Use arrow keys or WASD keys to plan soldier movement.
 
 When a player's soldiers step on a tile, that tile is occupied. Soldiers from multiple players on the same tile will cancel each other out. Certain terrain types, such as walls and towers, will cancel soldiers on the tile and reduce the number of soldiers needed for occupation until fully captured.
 
