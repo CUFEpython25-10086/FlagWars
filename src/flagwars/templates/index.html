@@ -1125,6 +1125,123 @@
             margin-left: auto;
         }
         
+        /* 欢迎弹窗样式 */
+        .welcome-content {
+            max-width: 600px;
+            text-align: center;
+        }
+        
+        .welcome-title {
+            font-size: 2.5em;
+            background: linear-gradient(45deg, var(--primary-100), var(--accent-100));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+        }
+        
+        .welcome-subtitle {
+            color: var(--text-200);
+            font-size: 1.2em;
+            margin-top: 10px;
+        }
+        
+        .welcome-body {
+            text-align: left;
+            margin-bottom: 30px;
+        }
+        
+        .welcome-section {
+            margin-bottom: 25px;
+        }
+        
+        .basic-info {
+            display: grid;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: var(--bg-300);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary-100);
+        }
+        
+        .info-icon {
+            font-size: 1.2em;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+        }
+        
+        .feature-list li {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            background: var(--bg-300);
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-100);
+        }
+        
+        .welcome-actions {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid var(--bg-300);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .btn-guest, .btn-login {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 140px;
+        }
+        
+        .btn-guest {
+            background: var(--accent-100);
+            color: white;
+        }
+        
+        .btn-guest:hover {
+            background: var(--accent-200);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(46, 134, 171, 0.4);
+        }
+        
+        .btn-login {
+            background: var(--primary-100);
+            color: white;
+        }
+        
+        .btn-login:hover {
+            background: var(--primary-200);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 87, 51, 0.4);
+        }
+        
+        .login-benefit {
+            color: var(--text-200);
+            font-size: 0.9em;
+            margin: 0;
+            font-style: italic;
+        }
+        
         h3, h4 {
             color: var(--text-100);
         }
@@ -1844,6 +1961,63 @@
         </div>
     </div>
     
+    <!-- 欢迎弹窗 -->
+    <div id="welcomeModal" class="tutorial-modal" style="display: flex;">
+        <div class="tutorial-content welcome-content">
+            <div class="tutorial-header">
+                <h1 class="welcome-title">🏴 FlagWars 🏴</h1>
+                <p class="welcome-subtitle">策略旗帜战争游戏</p>
+            </div>
+            
+            <div class="welcome-body">
+                <div class="welcome-section">
+                    <h3>🎯 游戏目标</h3>
+                    <p>占领所有对手的基地，成为最后的胜利者！</p>
+                </div>
+                
+                <div class="welcome-section">
+                    <h3>🎮 基础玩法</h3>
+                    <div class="basic-info">
+                        <div class="info-item">
+                            <span class="info-icon">👥</span>
+                            <span>选择你的士兵（点击自己的地块）</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">🎯</span>
+                            <span>使用方向键移动士兵</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">🏰</span>
+                            <span>占领地形获得更多士兵</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">⚔️</span>
+                            <span>击败对手，占领其基地</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="welcome-section">
+                    <h3>💡 特色功能</h3>
+                    <ul class="feature-list">
+                        <li>📊 <strong>游戏统计</strong> - 记录你的游戏数据</li>
+                        <li>🎵 <strong>自定义音乐</strong> - 选择喜欢的背景音乐</li>
+                        <li>🏆 <strong>实时排行</strong> - 查看当前游戏排名</li>
+                        <li>👥 <strong>多玩家对战</strong> - 支持多人在线游戏</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="welcome-actions">
+                <div class="action-buttons">
+                    <button id="guestPlayBtn" class="btn-guest">⏳ 暂不登录</button>
+                    <button id="loginRegisterBtn" class="btn-login">🔐 登录/注册</button>
+                </div>
+                <p class="login-benefit">登录后可保存游戏进度、查看统计数据、个性化音乐设置</p>
+            </div>
+        </div>
+    </div>
+    
     <!-- 教程弹窗 -->
     <div id="tutorialModal" class="tutorial-modal">
         <div class="tutorial-content">
@@ -2108,6 +2282,13 @@
                 document.getElementById('createRoom').disabled = false;
                 document.getElementById('joinRoom').disabled = false;
                 
+                // 用户已登录，隐藏欢迎弹窗并清除标记
+                const welcomeModal = document.getElementById('welcomeModal');
+                if (welcomeModal) {
+                    welcomeModal.style.display = 'none';
+                }
+                localStorage.setItem('flagwars_welcome_dismissed', 'true');
+                
                 // 加载用户音乐设置
                 this.load_user_music_settings();
             }
@@ -2153,6 +2334,8 @@
                     if (response.ok) {
                         this.isLoggedIn = false;
                         this.username = null;
+                        // 退出登录时清除欢迎弹窗标记，下次访问时会再次显示
+                        localStorage.removeItem('flagwars_welcome_dismissed');
                         this.update_ui_for_logged_out_user();
                     } else {
                         console.error('退出登录失败');
@@ -4239,8 +4422,58 @@
             }
         }
         
+        // 欢迎弹窗控制
+        let welcomeShown = false;
+        
+        // 检查是否需要显示欢迎弹窗
+        function shouldShowWelcome() {
+            // 如果用户已经登录，不显示欢迎弹窗
+            const isLoggedIn = window.gameClient && window.gameClient.isLoggedIn;
+            const hasSeenWelcome = localStorage.getItem('flagwars_welcome_dismissed');
+            return !isLoggedIn && !hasSeenWelcome;
+        }
+        
+        // 隐藏欢迎弹窗
+        function hideWelcomeModal() {
+            const welcomeModal = document.getElementById('welcomeModal');
+            if (welcomeModal) {
+                welcomeModal.style.display = 'none';
+                localStorage.setItem('flagwars_welcome_dismissed', 'true');
+            }
+        }
+        
+        // 暂不登录
+        function playAsGuest() {
+            hideWelcomeModal();
+        }
+        
+        // 跳转到登录页面
+        function goToLogin() {
+            hideWelcomeModal();
+            // 延迟跳转，确保弹窗已经关闭
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 300);
+        }
+        
         // 当页面加载完成后启动游戏
         window.addEventListener('load', () => {
+            // 初始化欢迎弹窗事件
+            const guestPlayBtn = document.getElementById('guestPlayBtn');
+            const loginRegisterBtn = document.getElementById('loginRegisterBtn');
+            const welcomeModal = document.getElementById('welcomeModal');
+            
+            if (guestPlayBtn) guestPlayBtn.addEventListener('click', playAsGuest);
+            if (loginRegisterBtn) loginRegisterBtn.addEventListener('click', goToLogin);
+            
+            // 点击欢迎弹窗外部不关闭，保持引导性
+            if (welcomeModal) {
+                welcomeModal.addEventListener('click', function(event) {
+                    // 不允许点击外部关闭，保证用户必须做出选择
+                    event.stopPropagation();
+                });
+            }
+            
             // 初始化教程弹窗事件
             const tutorialBtn = document.getElementById('tutorialBtn');
             const closeTutorial = document.getElementById('closeTutorial');
@@ -4262,8 +4495,18 @@
                 });
             }
             
-            // 启动游戏
-            new FlagWarsClient();
+            // 启动游戏并保存到全局变量
+            window.gameClient = new FlagWarsClient();
+            
+            // 页面启动后检查是否需要显示欢迎弹窗
+            setTimeout(() => {
+                if (shouldShowWelcome()) {
+                    const welcomeModal = document.getElementById('welcomeModal');
+                    if (welcomeModal) {
+                        welcomeModal.style.display = 'flex';
+                    }
+                }
+            }, 1500); // 延迟1.5秒显示，确保登录状态检查完成
         });
     </script>
 </body>
