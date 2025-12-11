@@ -2903,6 +2903,11 @@
                     }
                 }
                 
+                // 渲染移动箭头（仅当前玩家可见）
+                if (this.game_state.movement_arrows && this.game_state.movement_arrows.length > 0) {
+                    this.render_movement_arrows();
+                }
+                
                 // 渲染选中效果
                 if (this.selected_tile) {
                     this.render_selection();
@@ -3166,6 +3171,47 @@
                 this.ctx.strokeStyle = "#f1c40f";
                 this.ctx.lineWidth = 3;
                 this.ctx.strokeRect(screen_x, screen_y, this.tile_size, this.tile_size);
+            }
+            
+            // 渲染移动箭头
+            render_movement_arrows() {
+                if (!this.game_state.movement_arrows) return;
+                
+                const arrows = this.game_state.movement_arrows;
+                
+                // 为每个移动箭头绘制
+                arrows.forEach(arrow => {
+                    const startX = arrow.from_x * this.tile_size + this.tile_size / 2;
+                    const startY = arrow.from_y * this.tile_size + this.tile_size / 2;
+                    const endX = arrow.to_x * this.tile_size + this.tile_size / 2;
+                    const endY = arrow.to_y * this.tile_size + this.tile_size / 2;
+                    
+                    // 绘制箭头主体
+                    this.ctx.strokeStyle = "#ffffff"; // 白色箭头
+                    this.ctx.lineWidth = 3;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(startX, startY);
+                    this.ctx.lineTo(endX, endY);
+                    this.ctx.stroke();
+                    
+                    // 绘制箭头头部
+                    const angle = Math.atan2(endY - startY, endX - startX);
+                    const arrowHeadLength = 15;
+                    
+                    this.ctx.fillStyle = "#ffffff";
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(endX, endY);
+                    this.ctx.lineTo(
+                        endX - arrowHeadLength * Math.cos(angle - Math.PI / 6),
+                        endY - arrowHeadLength * Math.sin(angle - Math.PI / 6)
+                    );
+                    this.ctx.lineTo(
+                        endX - arrowHeadLength * Math.cos(angle + Math.PI / 6),
+                        endY - arrowHeadLength * Math.sin(angle + Math.PI / 6)
+                    );
+                    this.ctx.closePath();
+                    this.ctx.fill();
+                });
             }
             
             render_game_info() {

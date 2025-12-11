@@ -633,7 +633,8 @@ class GameManager:
             'winner': game_state.winner.name if game_state.winner else None,
             'tiles': [],
             'players': {},
-            'leaderboard': []  # 添加排行榜数据
+            'leaderboard': [],  # 添加排行榜数据
+            'movement_arrows': {}  # 添加移动箭头数据（仅当前玩家可见）
         }
         
         # 添加倒计时信息
@@ -644,6 +645,12 @@ class GameManager:
         
         # 获取排行榜数据
         state_dict['leaderboard'] = game_state.get_all_players_stats()
+        
+        # 添加移动箭头数据（仅当前玩家可见）
+        if player_id and player_id in game_state.movement_arrows:
+            state_dict['movement_arrows'] = game_state.movement_arrows[player_id]
+        else:
+            state_dict['movement_arrows'] = []
         
         # 序列化地图
         for y in range(game_state.map_height):

@@ -96,6 +96,9 @@ class GameState:
         self.spawn_points = []
         self.game_over_type = None
         
+        # 添加移动箭头追踪
+        self.movement_arrows = {}  # {player_id: [{from_x, from_y, to_x, to_y, created_tick}]}
+        
         # 初始化地图
         self._initialize_map()
     
@@ -335,11 +338,32 @@ class GameState:
             if moves:
                 # 取出第一个操作并执行
                 move_data = moves.pop(0)
-                self._process_move(
+                success = self._process_move(
                     move_data['from_x'], move_data['from_y'],
                     move_data['to_x'], move_data['to_y'],
                     move_data['player_id']
                 )
+                # 移动成功后，只清除与这次移动相关的箭头
+                if success and player_id in self.movement_arrows:
+                    # 只清除与这次具体移动相关的箭头
+                    self._remove_specific_arrow(
+                        player_id, 
+                        move_data['from_x'], move_data['from_y'],
+                        move_data['to_x'], move_data['to_y']
+                    )
+    
+    def _remove_specific_arrow(self, player_id: int, from_x: int, from_y: int, to_x: int, to_y: int):
+        """移除与具体移动操作相关的箭头"""
+        if player_id not in self.movement_arrows:
+            return
+        
+        arrows = self.movement_arrows[player_id]
+        # 找到并移除匹配的箭头（起点和终点都匹配的箭头）
+        self.movement_arrows[player_id] = [
+            arrow for arrow in arrows 
+            if not (arrow['from_x'] == from_x and arrow['from_y'] == from_y and 
+                   arrow['to_x'] == to_x and arrow['to_y'] == to_y)
+        ]
     
     def _process_move(self, from_x: int, from_y: int, to_x: int, to_y: int, player_id: int):
         """处理移动操作（实际执行）"""
@@ -612,6 +636,18 @@ class GameState:
             'to_x': to_x,
             'to_y': to_y,
             'player_id': player_id
+        })
+        
+        # 添加移动箭头（仅对己方可见）
+        if player_id not in self.movement_arrows:
+            self.movement_arrows[player_id] = []
+        
+        self.movement_arrows[player_id].append({
+            'from_x': from_x,
+            'from_y': from_y,
+            'to_x': to_x,
+            'to_y': to_y,
+            'created_tick': self.current_tick
         })
         
         return True
