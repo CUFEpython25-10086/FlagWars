@@ -39,6 +39,10 @@ Attack, defend, cooperate, and betray... use every opportunity to win!
 - **Client**: HTML5 Canvas + Brython (Python in Browser)
 - **Package Management**: uv (modern Python package manager)
 
+# Project Structure
+
+[Project Structure](docs/project-structure.md)
+
 # Team Composition
 
 | 姓名 | GitHub 用户名 |职位|

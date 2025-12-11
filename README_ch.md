@@ -39,6 +39,10 @@ FlagWars 是一款现代化的*夺旗*游戏。在这个游戏中，每个玩家
 - **客户端**：HTML5 Canvas + Brython（Python in Browser）
 - **包管理**：uv（现代Python包管理器）
 
+# 项目结构
+
+[项目结构](docs/project-structure.md)
+
 # 团队分工
 
 | 姓名 | GitHub 用户名 |职位|
