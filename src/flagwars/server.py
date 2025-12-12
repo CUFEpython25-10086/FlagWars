@@ -1493,6 +1493,9 @@ class GameManager:
         for player_id in self.player_ready_states[game_id]:
             self.player_ready_states[game_id][player_id] = False
         
+        # 重置游戏状态时也初始化战争迷雾，确保地图初始状态正确
+        self.games[game_id].update_fog_of_war()
+        
         # 广播游戏重置后的状态给所有玩家
         self.broadcast_game_state(game_id)
         

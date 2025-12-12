@@ -259,6 +259,28 @@ class GameState:
         
         # 随机生成地形
         self._generate_random_terrain()
+        
+        # 初始化战争迷雾：确保所有地块默认不可见
+        self._initialize_fog_of_war()
+    
+    def _initialize_fog_of_war(self):
+        """初始化战争迷雾：默认所有地块对所有玩家都不可见"""
+        for row in self.tiles:
+            for tile in row:
+                # 初始化每个地块的可见性为空字典，稍后根据实际玩家进行填充
+                tile.visibility = {}
+    
+    def _initialize_player_visibility(self, player_id: int):
+        """为指定玩家在所有地块上初始化可见性（默认为不可见）"""
+        for row in self.tiles:
+            for tile in row:
+                tile.visibility[player_id] = False
+    
+    def _initialize_spectator_visibility(self, player_id: int):
+        """为指定观战者在所有地块上初始化可见性（观战者拥有全图视野）"""
+        for row in self.tiles:
+            for tile in row:
+                tile.visibility[player_id] = True
     
     def _generate_random_terrain(self):
         """随机生成地形"""
@@ -476,6 +498,9 @@ class GameState:
         # 为新玩家初始化操作队列
         self.pending_moves[player.id] = []
         
+        # 为新玩家在所有地块上初始化可见性（默认为不可见）
+        self._initialize_player_visibility(player.id)
+        
         # 设置基地地形
         base_tile = self.tiles[base_y][base_x]
         base_tile.terrain_type = TerrainType.BASE
@@ -490,6 +515,9 @@ class GameState:
         
         # 为观战者初始化操作队列（虽然他们不会使用）
         self.pending_moves[player.id] = []
+        
+        # 为观战者在所有地块上初始化可见性（观战者拥有全图视野）
+        self._initialize_spectator_visibility(player.id)
         
         # 观战者不分配基地地形
     
