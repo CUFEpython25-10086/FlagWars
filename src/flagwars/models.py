@@ -556,6 +556,10 @@ class GameState:
                 if success and player_id in self.movement_arrows:
                     # 只清除与这次具体移动相关的箭头（通过move_id匹配）
                     self._remove_specific_arrow(player_id, move_id)
+                # 移动失败时也要清理箭头（包括士兵不足等情况）
+                elif not success and player_id in self.movement_arrows:
+                    # 清除与这次具体移动相关的箭头（通过move_id匹配）
+                    self._remove_specific_arrow(player_id, move_id)
     
     def _remove_specific_arrow(self, player_id: int, move_id: str):
         """移除与具体移动操作相关的箭头"""
