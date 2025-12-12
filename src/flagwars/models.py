@@ -788,8 +788,9 @@ class GameState:
         alive_players = [p for p in self.players.values() if p.is_alive and not p.is_spectator]
         if len(alive_players) <= 1:
             self.game_over = True
+            self.game_over_type = 'normal'  # 标记为正常结束
             if alive_players:
-                self.winner = alive_players[0].name
+                self.winner = alive_players[0]
     
     def get_all_players_stats(self):
         """获取所有玩家的统计数据，按总兵力排序"""
