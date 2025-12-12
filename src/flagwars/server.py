@@ -23,7 +23,7 @@ import time
 from typing import Dict, Set, Any
 from tornado import web, websocket, ioloop, httpserver
 
-from .models import GameState, Player
+from .models import GameState, Player, TerrainType
 from .database import db
 from .auth import auth_routes
 
@@ -150,6 +150,10 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
                 self._handle_get_rooms()
             elif message_type == 'player_ready':
                 self._handle_player_ready()
+            elif message_type == 'spectator_mode':
+                self._handle_spectator_mode()
+            elif message_type == 'cancel_spectator_mode':
+                self._handle_cancel_spectator_mode()
             elif message_type == 'move_soldiers':
                 self._handle_move_soldiers(data)
             elif message_type == 'get_game_state':
@@ -344,6 +348,52 @@ class GameWebSocketHandler(websocket.WebSocketHandler):
         # 如果游戏开始，广播给所有玩家
         if game_started:
             self.game_manager.broadcast_game_start(self.game_id)
+    
+    def _handle_spectator_mode(self):
+        """处理玩家选择观战模式请求"""
+        if not self.player_id or not self.game_id:
+            self.send_error("请先加入游戏")
+            return
+        
+        # 设置玩家为观战模式
+        success = self.game_manager.set_voluntary_spectator(self.game_id, self.player_id)
+        
+        if success:
+            # 发送观战模式设置成功消息
+            response = {
+                'type': 'spectator_mode_set',
+                'message': '已成功设置为观战模式',
+                'game_state': self.game_manager.get_game_state(self.game_id)
+            }
+            self.write_message(json.dumps(response, default=str))
+            
+            # 广播玩家状态更新给房间内所有玩家
+            self.game_manager.broadcast_player_status_update(self.game_id)
+        else:
+            self.send_error("设置观战模式失败")
+    
+    def _handle_cancel_spectator_mode(self):
+        """处理玩家取消观战模式请求"""
+        if not self.player_id or not self.game_id:
+            self.send_error("请先加入游戏")
+            return
+        
+        # 取消玩家观战模式
+        success = self.game_manager.cancel_voluntary_spectator(self.game_id, self.player_id)
+        
+        if success:
+            # 发送观战模式取消成功消息
+            response = {
+                'type': 'cancel_spectator_mode_set',
+                'message': '已成功取消观战模式',
+                'game_state': self.game_manager.get_game_state(self.game_id)
+            }
+            self.write_message(json.dumps(response, default=str))
+            
+            # 广播玩家状态更新给房间内所有玩家
+            self.game_manager.broadcast_player_status_update(self.game_id)
+        else:
+            self.send_error("取消观战模式失败")
     
     def _handle_move_soldiers(self, data):
         """处理移动士兵请求"""
@@ -621,10 +671,14 @@ class GameManager:
             new_player_count = len(self.players[room_id]) + 1
             game_state.spawn_points = game_state.generate_random_spawn_points(new_player_count, min_distance=10)
         
-        # 分配出生点
-        base_x, base_y = game_state.spawn_points[player_index]
+        # 分配出生点（观战者不分配基地）
+        if not player.voluntary_spectator:  # 只有非观战者才分配基地
+            base_x, base_y = game_state.spawn_points[player_index]
+            game_state.add_player(player, base_x, base_y)
+        else:
+            # 观战者加入游戏但不分配基地
+            game_state.add_player_as_spectator(player)
         
-        game_state.add_player(player, base_x, base_y)
         self.player_ready_states[room_id][player_id] = False  # 初始未准备
         
         return room_id, player_id, None  # 第三个参数为错误信息，None表示成功
@@ -671,28 +725,213 @@ class GameManager:
         # 切换准备状态
         self.player_ready_states[game_id][player_id] = not self.player_ready_states[game_id][player_id]
         
-        # 检查是否所有玩家都准备且至少有2个玩家
-        all_players_ready = all(self.player_ready_states[game_id].values())
+        # 获取游戏状态和玩家信息
+        if game_id not in self.games:
+            return False
+        
+        game_state = self.games[game_id]
+        
+        # 统计非观战者玩家的准备状态
+        non_spectator_players = {}  # {player_id: ready_state}
+        non_spectator_ready_count = 0
+        
+        for pid, ready_state in self.player_ready_states[game_id].items():
+            player = game_state.players.get(pid)
+            if player and not player.voluntary_spectator:
+                non_spectator_players[pid] = ready_state
+                if ready_state:
+                    non_spectator_ready_count += 1
+        
+        total_non_spectator_players = len(non_spectator_players)
+        all_non_spectator_ready = all(non_spectator_players.values())
+        
+        # 调试信息：打印准备状态（区分观战者和非观战者）
         total_players = len(self.player_ready_states[game_id])
+        spectator_count = total_players - total_non_spectator_players
+        logging.info(f"游戏 {game_id} 准备状态: 总玩家数={total_players} (非观战者={total_non_spectator_players}, 观战者={spectator_count}), 非观战者准备数={non_spectator_ready_count}, 非观战者全部准备={all_non_spectator_ready}")
         
-        # 调试信息：打印准备状态
-        logging.info(f"游戏 {game_id} 准备状态: 玩家数={total_players}, 所有玩家准备={all_players_ready}, 准备状态={self.player_ready_states[game_id]}")
-        
-        # 如果玩家取消准备，则取消倒计时
+        # 如果玩家取消准备，则取消倒计时（只检查非观战者）
         if not self.player_ready_states[game_id][player_id]:
-            if game_id in self.countdown_tasks and not self.countdown_tasks[game_id].done():
+            # 检查取消准备的玩家是否是非观战者
+            player = game_state.players.get(player_id)
+            if player and not player.voluntary_spectator:
+                if game_id in self.countdown_tasks and not self.countdown_tasks[game_id].done():
+                    self.countdown_tasks[game_id].cancel()
+                    self.countdown_tasks.pop(game_id, None)
+                    self.game_countdowns.pop(game_id, None)
+                    logging.info(f"非观战者玩家 {player_id} 取消准备，倒计时已取消")
+        
+        # 如果至少有2个非观战者玩家、所有非观战者玩家都准备且游戏未开始，则开始倒计时
+        if total_non_spectator_players >= 2 and all_non_spectator_ready and not game_state.game_started:
+            # 开始3秒倒计时
+            self.start_game_countdown(game_id)
+            logging.info(f"游戏 {game_id} 开始3秒倒计时：{total_non_spectator_players}个非观战者玩家全部准备")
+            return False  # 注意：这里返回False，因为游戏还没有真正开始，只是开始了倒计时
+        
+        # 如果不满足倒计时条件但有倒计时在进行，则取消倒计时
+        if game_id in self.countdown_tasks and not self.countdown_tasks[game_id].done():
+            # 检查是否还有足够的非观战者玩家
+            if total_non_spectator_players < 2 or not all_non_spectator_ready:
                 self.countdown_tasks[game_id].cancel()
                 self.countdown_tasks.pop(game_id, None)
                 self.game_countdowns.pop(game_id, None)
-                logging.info(f"玩家 {player_id} 取消准备，倒计时已取消")
-        
-        # 如果至少有2个玩家、所有玩家都准备且游戏未开始，则开始倒计时
-        if total_players >= 2 and all_players_ready and game_id in self.games and not self.games[game_id].game_started:
-            # 开始3秒倒计时
-            self.start_game_countdown(game_id)
-            return False  # 注意：这里返回False，因为游戏还没有真正开始，只是开始了倒计时
+                logging.info(f"游戏 {game_id} 倒计时已取消：不满足开始条件")
         
         return False
+
+    def set_voluntary_spectator(self, game_id: str, player_id: int) -> bool:
+        """
+        设置玩家为主动观战者
+        
+        当玩家在准备阶段选择观战模式时调用此方法。
+        观战者不能操作，但拥有全图视野。
+        
+        Args:
+            game_id: 游戏ID
+            player_id: 玩家ID
+            
+        Returns:
+            bool: 是否成功设置为主动观战者
+        """
+        if game_id not in self.games or player_id not in self.games[game_id].players:
+            return False
+        
+        player = self.games[game_id].players[player_id]
+        
+        # 如果游戏已开始，不允许设置观战模式
+        if self.games[game_id].game_started:
+            return False
+        
+        # 如果玩家之前已分配基地，需要先移除基地
+        if player.base_position is not None:
+            self._remove_player_base(game_id, player_id)
+        
+        player.set_voluntary_spectator()
+        
+        # 重新初始化准备状态：观战者不需要准备
+        if game_id in self.player_ready_states and player_id in self.player_ready_states[game_id]:
+            self.player_ready_states[game_id][player_id] = True  # 观战者视为已准备
+        
+        logging.info(f"玩家 {player_id} 设置为观战模式，基地已移除")
+        return True
+
+    def cancel_voluntary_spectator(self, game_id: str, player_id: int) -> bool:
+        """
+        取消玩家的主动观战者状态
+        
+        当玩家在准备阶段选择取消观战模式时调用此方法。
+        
+        Args:
+            game_id: 游戏ID
+            player_id: 玩家ID
+            
+        Returns:
+            bool: 是否成功取消观战者状态
+        """
+        if game_id not in self.games or player_id not in self.games[game_id].players:
+            return False
+        
+        player = self.games[game_id].players[player_id]
+        
+        # 如果游戏已开始，不允许取消观战模式
+        if self.games[game_id].game_started:
+            return False
+        
+        # 重置玩家的观战状态
+        player.cancel_voluntary_spectator()
+        
+        # 为玩家重新分配基地
+        self._assign_player_base(game_id, player_id)
+        
+        # 重新初始化准备状态：取消观战后需要重新准备
+        if game_id in self.player_ready_states and player_id in self.player_ready_states[game_id]:
+            self.player_ready_states[game_id][player_id] = False  # 取消观战后视为未准备
+        
+        logging.info(f"玩家 {player_id} 取消观战模式，基地已重新分配")
+        return True
+    
+    def _remove_player_base(self, game_id: str, player_id: int):
+        """移除玩家的基地（用于观战模式切换）"""
+        if game_id not in self.games:
+            return
+        
+        game_state = self.games[game_id]
+        player = game_state.players.get(player_id)
+        
+        if player is None or player.base_position is None:
+            return
+        
+        base_x, base_y = player.base_position
+        
+        # 重置基地地形为平原
+        base_tile = game_state.tiles[base_y][base_x]
+        base_tile.terrain_type = TerrainType.PLAIN
+        base_tile.required_soldiers = 0
+        base_tile.owner = None
+        base_tile.soldiers = 0
+        
+        # 清除玩家的基地位置
+        player.base_position = None
+        
+        logging.info(f"已移除玩家 {player_id} 的基地")
+    
+    def _assign_player_base(self, game_id: str, player_id: int):
+        """为玩家分配基地（用于取消观战模式）"""
+        if game_id not in self.games:
+            return
+        
+        game_state = self.games[game_id]
+        player = game_state.players.get(player_id)
+        
+        if player is None or player.base_position is not None:
+            return
+        
+        # 找到可用的基地位置（选择一个没有基地的spawn point）
+        available_positions = []
+        for i, (base_x, base_y) in enumerate(game_state.spawn_points):
+            # 检查这个位置是否已经有基地
+            has_base = False
+            for other_player in game_state.players.values():
+                if other_player.base_position == (base_x, base_y):
+                    has_base = True
+                    break
+            if not has_base:
+                available_positions.append((base_x, base_y))
+        
+        if not available_positions:
+            # 如果没有可用位置，生成新的基地位置
+            new_player_count = len(game_state.players) + 1
+            game_state.spawn_points = game_state.generate_random_spawn_points(new_player_count, min_distance=10)
+            base_x, base_y = game_state.spawn_points[-1]  # 使用最后一个位置
+        else:
+            # 使用第一个可用位置
+            base_x, base_y = available_positions[0]
+        
+        # 设置玩家的基地位置
+        player.base_position = (base_x, base_y)
+        
+        # 设置基地地形
+        base_tile = game_state.tiles[base_y][base_x]
+        base_tile.terrain_type = TerrainType.BASE
+        base_tile.required_soldiers = base_tile._get_required_soldiers()
+        base_tile.owner = player
+        base_tile.soldiers = 10
+        
+        logging.info(f"已为玩家 {player_id} 分配基地位置 ({base_x}, {base_y})")
+
+    def broadcast_player_status_update(self, game_id: str):
+        """广播玩家状态更新给房间内所有玩家"""
+        if game_id not in self.players:
+            return
+        
+        message = {
+            'type': 'player_status_updated',
+            'game_state': self.get_game_state(game_id)
+        }
+        
+        for player_id, handler in self.players[game_id].items():
+            if handler:
+                handler.write_message(json.dumps(message, default=str))
 
     def broadcast_game_start(self, game_id: str):
         """广播游戏开始消息给所有玩家"""
@@ -917,6 +1156,7 @@ class GameManager:
                 'base_position': player.base_position,
                 'is_alive': player.is_alive,
                 'is_spectator': player.is_spectator,  # 添加旁观者状态
+                'voluntary_spectator': player.voluntary_spectator,  # 添加主动观战状态
                 'ready': self.player_ready_states.get(game_id, {}).get(pid, False)
             }
         
@@ -1238,11 +1478,13 @@ class GameManager:
                 self.room_colors[game_id] = set()
             self.room_colors[game_id].add(player_color)
             
-            # 分配基地位置
-            base_x, base_y = new_game_state.spawn_points[i]
-            
-            # 添加玩家到新游戏状态
-            new_game_state.add_player(player, base_x, base_y)
+            # 分配基地位置（观战者不分配基地）
+            if not player.voluntary_spectator:  # 只有非观战者才分配基地
+                base_x, base_y = new_game_state.spawn_points[i]
+                new_game_state.add_player(player, base_x, base_y)
+            else:
+                # 观战者加入游戏但不分配基地
+                new_game_state.add_player_as_spectator(player)
         
         # 替换旧的游戏状态
         self.games[game_id] = new_game_state

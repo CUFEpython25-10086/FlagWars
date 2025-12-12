@@ -61,12 +61,14 @@ class Player:
     玩家生命周期：
     1. 创建 - 加入游戏时创建Player实例
     2. 游戏中 - 正常参与游戏，可以移动和占领地块
-    3. 被淘汰 - 失去所有地块后转为旁观者状态
-    4. 结算 - 游戏结束时记录成绩
+    3. 观战模式 - 主动选择观战，只能观看不能操作
+    4. 被淘汰 - 失去所有地块后转为旁观者状态
+    5. 结算 - 游戏结束时记录成绩
     
     状态管理：
     - 存活状态：is_alive控制玩家是否仍在游戏中
-    - 旁观模式：is_spectator控制玩家是否在观看其他玩家游戏
+    - 主动观战：voluntary_spectator控制玩家是否主动选择观战
+    - 被动旁观：is_spectator控制玩家是否在观看其他玩家游戏（包含被淘汰和主动观战）
     - 准备状态：ready控制玩家是否准备好开始游戏
     - 基地位置：base_position记录玩家出生点坐标
     
@@ -81,7 +83,8 @@ class Player:
         color: 玩家颜色标识（十六进制颜色码）
         base_position: 玩家基地位置坐标 (x, y)
         is_alive: 玩家是否仍然存活
-        is_spectator: 玩家是否在旁观模式
+        voluntary_spectator: 玩家是否主动选择观战模式
+        is_spectator: 玩家是否为旁观者（包含主动观战和被淘汰）
         ready: 玩家是否准备好开始游戏
     """
     
@@ -99,8 +102,44 @@ class Player:
         self.color = color
         self.base_position: Optional[Tuple[int, int]] = None
         self.is_alive = True  # 默认存活状态
+        self.voluntary_spectator = False  # 默认非主动观战
         self.is_spectator = False  # 默认非旁观者
         self.ready = False  # 默认未准备
+    
+    def set_voluntary_spectator(self) -> None:
+        """
+        将玩家设置为主动观战者
+        
+        当玩家在准备阶段选择观战模式时调用此方法。
+        观战者只能观看游戏，不能进行任何操作，但拥有全图视野。
+        
+        副作用:
+            - 设置 voluntary_spectator = True
+            - 设置 is_spectator = True
+        
+        Note:
+            该方法通常在玩家准备阶段选择观战模式时调用
+        """
+        self.voluntary_spectator = True
+        self.is_spectator = True
+    
+    def cancel_voluntary_spectator(self) -> None:
+        """
+        取消玩家的主动观战者状态
+        
+        当玩家在准备阶段选择取消观战模式时调用此方法。
+        
+        副作用:
+            - 设置 voluntary_spectator = False
+            - 设置 is_spectator = False（仅当玩家还存活时）
+        
+        Note:
+            该方法通常在玩家准备阶段取消观战模式时调用
+        """
+        self.voluntary_spectator = False
+        # 只有当玩家还存活时，才取消旁观者状态（如果已被淘汰则保持旁观状态）
+        if self.is_alive:
+            self.is_spectator = False
     
     def eliminate(self) -> None:
         """
@@ -111,7 +150,7 @@ class Player:
         
         副作用:
             - 设置 is_alive = False
-            - 设置 is_spectator = True
+            - 设置 is_spectator = True（但不影响主动观战状态）
         
         Note:
             该方法通常在游戏逻辑检测到玩家无地块时自动调用
@@ -134,7 +173,8 @@ class Player:
                 - name: 玩家名称
                 - color: 玩家颜色
                 - is_alive: 是否存活
-                - is_spectator: 是否为旁观者
+                - voluntary_spectator: 是否为主动观战者
+                - is_spectator: 是否为旁观者（包含主动观战和被淘汰）
                 - ready: 是否准备好
         """
         return {
@@ -142,6 +182,7 @@ class Player:
             "name": self.name,
             "color": self.color,
             "is_alive": self.is_alive,
+            "voluntary_spectator": self.voluntary_spectator,
             "is_spectator": self.is_spectator,
             "ready": self.ready
         }
@@ -441,6 +482,16 @@ class GameState:
         base_tile.required_soldiers = base_tile._get_required_soldiers()
         base_tile.owner = player
         base_tile.soldiers = 10
+    
+    def add_player_as_spectator(self, player: Player):
+        """添加观战者玩家（不分配基地）"""
+        self.players[player.id] = player
+        player.base_position = None  # 观战者没有基地位置
+        
+        # 为观战者初始化操作队列（虽然他们不会使用）
+        self.pending_moves[player.id] = []
+        
+        # 观战者不分配基地地形
     
     def remove_player(self, player_id: int):
         """移除玩家"""

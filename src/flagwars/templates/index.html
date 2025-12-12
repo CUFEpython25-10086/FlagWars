@@ -1876,6 +1876,8 @@
                     
                     <button id="joinGame" style="display: none;">加入游戏</button>
                     <button id="readyBtn" style="display: none; background-color: #ff6b6b;">准备</button>
+                    <button id="spectatorBtn" style="display: none; background-color: #9b59b6;">成为观战者</button>
+                    <button id="cancelSpectatorBtn" style="display: none; background-color: #f39c12;">取消观战</button>
                     <div class="status" id="connectionStatus">未连接</div>
                 </div>
                 
@@ -2236,6 +2238,12 @@
                 // 准备按钮
                 document.getElementById("readyBtn").addEventListener("click", (e) => this.toggle_ready(e));
                 
+                // 观战按钮
+                document.getElementById("spectatorBtn").addEventListener("click", (e) => this.become_spectator(e));
+                
+                // 取消观战按钮
+                document.getElementById("cancelSpectatorBtn").addEventListener("click", (e) => this.cancel_spectator(e));
+                
                 // 音乐控制按钮
                 this.musicToggle.addEventListener("click", () => this.toggle_music());
                 
@@ -2464,6 +2472,12 @@
                     case 'countdown_cancelled':
                         this.handle_countdown_cancelled(data);
                         break;
+                    case 'spectator_mode_set':
+                        this.handle_spectator_mode_set(data);
+                        break;
+                    case 'cancel_spectator_mode_set':
+                        this.handle_cancel_spectator_mode_set(data);
+                        break;
                 }
             }
             
@@ -2596,6 +2610,94 @@
                 this.ws.send(JSON.stringify(ready_message));
             }
             
+            become_spectator(event) {
+                // 检查用户是否已登录
+                if (!this.isLoggedIn) {
+                    document.getElementById("gameStatus").textContent = "请先登录后再选择观战模式";
+                    return;
+                }
+                
+                if (!this.ws) {
+                    document.getElementById("gameStatus").textContent = "请先连接服务器";
+                    return;
+                }
+                
+                // 检查游戏是否已开始
+                if (this.game_state && this.game_state.game_started) {
+                    document.getElementById("gameStatus").textContent = "游戏已开始，无法更改身份";
+                    return;
+                }
+                
+                // 立即更新按钮状态，提供即时反馈
+                const cancelSpectatorBtn = document.getElementById("cancelSpectatorBtn");
+                const spectatorBtn = document.getElementById("spectatorBtn");
+                const readyBtn = document.getElementById("readyBtn");
+                
+                // 显示取消观战按钮，隐藏准备和观战按钮
+                cancelSpectatorBtn.style.display = "inline-block";
+                spectatorBtn.style.display = "none";
+                readyBtn.style.display = "none";
+                
+                // 更新游戏状态文本
+                document.getElementById("gameStatus").textContent = "正在设置为观战模式...";
+                
+                const spectator_message = {
+                    "type": "spectator_mode"
+                };
+                
+                this.ws.send(JSON.stringify(spectator_message));
+            }
+            
+            // 取消观战模式
+            cancel_spectator(event) {
+                // 检查用户是否已登录
+                if (!this.isLoggedIn) {
+                    document.getElementById("gameStatus").textContent = "请先登录后再操作";
+                    return;
+                }
+                
+                if (!this.ws) {
+                    document.getElementById("gameStatus").textContent = "请先连接服务器";
+                    return;
+                }
+                
+                // 检查游戏是否已开始
+                if (this.game_state && this.game_state.game_started) {
+                    document.getElementById("gameStatus").textContent = "游戏已开始，无法取消观战模式";
+                    return;
+                }
+                
+                // 立即更新按钮状态，提供即时反馈
+                const cancelSpectatorBtn = document.getElementById("cancelSpectatorBtn");
+                const spectatorBtn = document.getElementById("spectatorBtn");
+                const readyBtn = document.getElementById("readyBtn");
+                
+                // 显示准备和观战按钮，隐藏取消观战按钮
+                cancelSpectatorBtn.style.display = "none";
+                spectatorBtn.style.display = "inline-block";
+                readyBtn.style.display = "inline-block";
+                
+                // 启用按钮
+                readyBtn.disabled = false;
+                spectatorBtn.disabled = false;
+                cancelSpectatorBtn.disabled = false;
+                
+                // 重置按钮颜色
+                readyBtn.style.backgroundColor = "#ff6b6b";
+                readyBtn.textContent = "准备";
+                spectatorBtn.style.backgroundColor = "#9b59b6";
+                cancelSpectatorBtn.style.backgroundColor = "#f39c12";
+                
+                // 更新游戏状态文本
+                document.getElementById("gameStatus").textContent = "正在取消观战模式...";
+                
+                const cancel_spectator_message = {
+                    "type": "cancel_spectator_mode"
+                };
+                
+                this.ws.send(JSON.stringify(cancel_spectator_message));
+            }
+            
             handle_player_left(data) {
                 // 处理玩家离开消息
                 console.log(`玩家 ${data.player_name} 已离开游戏`);
@@ -2616,38 +2718,63 @@
                 this.game_state = data.game_state;
                 const game_started = data.game_started;
                 
-                // 更新准备按钮状态
+                // 获取按钮元素
                 const readyBtn = document.getElementById("readyBtn");
-                const player_ready = this.game_state.players[this.player_id]?.ready || false;
+                const spectatorBtn = document.getElementById("spectatorBtn");
+                const cancelSpectatorBtn = document.getElementById("cancelSpectatorBtn");
+                const player = this.game_state.players[this.player_id];
+                const player_ready = player?.ready || false;
+                const is_voluntary_spectator = player?.voluntary_spectator || false;
                 
                 if (game_started) {
-                    // 游戏已开始，禁用准备按钮
+                    // 游戏已开始，禁用所有按钮
                     readyBtn.disabled = true;
                     readyBtn.textContent = "游戏已开始";
                     readyBtn.style.backgroundColor = "#95a5a6";
+                    spectatorBtn.disabled = true;
+                    spectatorBtn.style.backgroundColor = "#95a5a6";
+                    cancelSpectatorBtn.disabled = true;
+                    cancelSpectatorBtn.style.backgroundColor = "#95a5a6";
                     document.getElementById("gameStatus").textContent = "游戏开始！";
                 } else {
-                    // 游戏未开始，允许切换准备状态
-                    readyBtn.disabled = false;
-                    
-                    if (player_ready) {
-                        readyBtn.textContent = "取消准备";
-                        readyBtn.style.backgroundColor = "#6bff6b";
+                    // 游戏未开始，显示身份选择
+                    if (is_voluntary_spectator) {
+                        // 玩家已选择观战模式
+                        readyBtn.style.display = "none";
+                        spectatorBtn.style.display = "none";
+                        cancelSpectatorBtn.style.display = "inline-block";
+                        
+                        document.getElementById("gameStatus").textContent = "您已选择观战模式";
+                        // 标记为已准备
+                        player.ready = true;
                     } else {
-                        readyBtn.textContent = "准备";
-                        readyBtn.style.backgroundColor = "#ff6b6b";
-                    }
-                    
-                    // 更新游戏状态显示
-                    const ready_players = Object.values(this.game_state.players).filter(p => p.ready).length;
-                    const total_players = Object.keys(this.game_state.players).length;
-                    
-                    if (total_players < 2) {
-                        document.getElementById("gameStatus").textContent = 
-                            `等待其他玩家加入 (${total_players}/2)`;
-                    } else {
-                        document.getElementById("gameStatus").textContent = 
-                            `等待玩家准备 (${ready_players}/${total_players})`;
+                        // 普通玩家身份 - 始终显示准备和观战按钮
+                        readyBtn.style.display = "inline-block";
+                        spectatorBtn.style.display = "inline-block";
+                        cancelSpectatorBtn.style.display = "none";
+                        
+                        readyBtn.disabled = false;
+                        spectatorBtn.disabled = false;
+                        
+                        if (player_ready) {
+                            readyBtn.textContent = "取消准备";
+                            readyBtn.style.backgroundColor = "#6bff6b";
+                        } else {
+                            readyBtn.textContent = "准备";
+                            readyBtn.style.backgroundColor = "#ff6b6b";
+                        }
+                        
+                        // 更新游戏状态显示
+                        const ready_players = Object.values(this.game_state.players).filter(p => p.ready).length;
+                        const total_players = Object.keys(this.game_state.players).length;
+                        
+                        if (total_players < 2) {
+                            document.getElementById("gameStatus").textContent = 
+                                `等待其他玩家加入 (${total_players}/2)`;
+                        } else {
+                            document.getElementById("gameStatus").textContent = 
+                                `等待玩家准备 (${ready_players}/${total_players})`;
+                        }
                     }
                 }
                 
@@ -2661,11 +2788,20 @@
                 // 隐藏倒计时容器
                 document.getElementById("countdownContainer").style.display = "none";
                 
-                // 禁用准备按钮
+                // 禁用所有身份选择按钮
                 const readyBtn = document.getElementById("readyBtn");
+                const spectatorBtn = document.getElementById("spectatorBtn");
+                const cancelSpectatorBtn = document.getElementById("cancelSpectatorBtn");
+                
                 readyBtn.disabled = true;
                 readyBtn.textContent = "游戏已开始";
                 readyBtn.style.backgroundColor = "#95a5a6";
+                
+                spectatorBtn.disabled = true;
+                spectatorBtn.style.backgroundColor = "#95a5a6";
+                
+                cancelSpectatorBtn.disabled = true;
+                cancelSpectatorBtn.style.backgroundColor = "#95a5a6";
                 
                 this.render();
             }
@@ -2677,10 +2813,25 @@
                 this.pending_selected_tile = null;
                 
                 document.getElementById("gameStatus").textContent = "游戏已重置，请准备开始新一局";
-                document.getElementById("readyBtn").style.display = "inline-block";
-                document.getElementById("readyBtn").textContent = "准备";
-                document.getElementById("readyBtn").style.backgroundColor = "#ff6b6b";
-                document.getElementById("readyBtn").disabled = false;  // 重置准备按钮为可点击状态
+                
+                // 重置所有按钮状态
+                const readyBtn = document.getElementById("readyBtn");
+                const spectatorBtn = document.getElementById("spectatorBtn");
+                const cancelSpectatorBtn = document.getElementById("cancelSpectatorBtn");
+                
+                // 显示准备按钮，隐藏观战相关按钮
+                readyBtn.style.display = "inline-block";
+                readyBtn.textContent = "准备";
+                readyBtn.style.backgroundColor = "#ff6b6b";
+                readyBtn.disabled = false;
+                
+                spectatorBtn.style.display = "inline-block";
+                spectatorBtn.disabled = false;
+                spectatorBtn.style.backgroundColor = "#9b59b6";
+                
+                cancelSpectatorBtn.style.display = "none";
+                cancelSpectatorBtn.disabled = false;
+                cancelSpectatorBtn.style.backgroundColor = "#f39c12";
                 
                 // 游戏重置后隐藏排行榜
                 document.getElementById("leaderboardContainer").style.display = "none";
@@ -2805,6 +2956,22 @@
                 
                 // 更新游戏状态文本
                 document.getElementById("gameStatus").textContent = "等待玩家准备";
+            }
+
+            handle_spectator_mode_set(data) {
+                // 处理观战模式设置成功
+                this.game_state = data.game_state;
+                document.getElementById("gameStatus").textContent = data.message;
+                this.render_players_list();
+                this.render();
+            }
+
+            handle_cancel_spectator_mode_set(data) {
+                // 处理取消观战模式成功
+                this.game_state = data.game_state;
+                document.getElementById("gameStatus").textContent = data.message;
+                this.render_players_list();
+                this.render();
             }
             
             on_ws_close(event) {
@@ -3063,24 +3230,32 @@
                     playerStatus.className = "player-status";
                     
                     if (player.id === this.player_id) {
-                        if (player.is_spectator) {
-                            playerStatus.textContent = "旁观者";
-                            playerStatus.style.backgroundColor = "rgba(255, 165, 0, 0.5)"; // 橙色表示旁观者
+                        if (player.voluntary_spectator) {
+                            playerStatus.textContent = "观战者";
+                            playerStatus.style.backgroundColor = "rgba(155, 89, 182, 0.5)"; // 紫色表示主动观战
+                        } else if (player.is_spectator) {
+                            playerStatus.textContent = "被淘汰";
+                            playerStatus.style.backgroundColor = "rgba(255, 0, 0, 0.5)"; // 红色表示被淘汰
                         } else {
                             playerStatus.textContent = "你";
                         }
-                    } else if (player.is_spectator) {
-                        playerStatus.textContent = "旁观者";
-                        playerStatus.style.backgroundColor = "rgba(255, 165, 0, 0.5)"; // 橙色表示旁观者
-                    } else if (!player.is_alive) {
-                        playerStatus.textContent = "已淘汰";
-                        playerStatus.style.backgroundColor = "rgba(255, 0, 0, 0.5)"; // 红色表示已淘汰
-                    } else if (player.ready) {
-                        playerStatus.textContent = "已准备";
-                        playerStatus.classList.add("ready");
                     } else {
-                        playerStatus.textContent = "未准备";
-                        playerStatus.classList.add("not-ready");
+                        if (player.voluntary_spectator) {
+                            playerStatus.textContent = "观战者";
+                            playerStatus.style.backgroundColor = "rgba(155, 89, 182, 0.5)"; // 紫色表示主动观战
+                        } else if (player.is_spectator) {
+                            playerStatus.textContent = "被淘汰";
+                            playerStatus.style.backgroundColor = "rgba(255, 0, 0, 0.5)"; // 红色表示被淘汰
+                        } else if (!player.is_alive) {
+                            playerStatus.textContent = "已淘汰";
+                            playerStatus.style.backgroundColor = "rgba(255, 0, 0, 0.5)"; // 红色表示已淘汰
+                        } else if (player.ready) {
+                            playerStatus.textContent = "已准备";
+                            playerStatus.classList.add("ready");
+                        } else {
+                            playerStatus.textContent = "未准备";
+                            playerStatus.classList.add("not-ready");
+                        }
                     }
                     
                     playerDiv.appendChild(playerInfo);
@@ -3764,8 +3939,23 @@
                 document.getElementById("roomControls").style.display = "none";
                 document.getElementById("roomList").style.display = "none";
                 
-                // 显示准备按钮
-                document.getElementById("readyBtn").style.display = "inline-block";
+                // 显示准备和成为观战者按钮
+                const readyBtn = document.getElementById("readyBtn");
+                const spectatorBtn = document.getElementById("spectatorBtn");
+                const cancelSpectatorBtn = document.getElementById("cancelSpectatorBtn");
+                
+                readyBtn.style.display = "inline-block";
+                readyBtn.textContent = "准备";
+                readyBtn.style.backgroundColor = "#ff6b6b";
+                readyBtn.disabled = false;
+                
+                spectatorBtn.style.display = "inline-block";
+                spectatorBtn.disabled = false;
+                spectatorBtn.style.backgroundColor = "#9b59b6";
+                
+                cancelSpectatorBtn.style.display = "none";
+                cancelSpectatorBtn.disabled = false;
+                cancelSpectatorBtn.style.backgroundColor = "#f39c12";
                 
                 // 开始定期获取游戏状态
                 this.start_state_updates();
@@ -3788,8 +3978,23 @@
                 document.getElementById("roomControls").style.display = "none";
                 document.getElementById("roomList").style.display = "none";
                 
-                // 显示准备按钮
-                document.getElementById("readyBtn").style.display = "inline-block";
+                // 显示准备和成为观战者按钮
+                const readyBtn = document.getElementById("readyBtn");
+                const spectatorBtn = document.getElementById("spectatorBtn");
+                const cancelSpectatorBtn = document.getElementById("cancelSpectatorBtn");
+                
+                readyBtn.style.display = "inline-block";
+                readyBtn.textContent = "准备";
+                readyBtn.style.backgroundColor = "#ff6b6b";
+                readyBtn.disabled = false;
+                
+                spectatorBtn.style.display = "inline-block";
+                spectatorBtn.disabled = false;
+                spectatorBtn.style.backgroundColor = "#9b59b6";
+                
+                cancelSpectatorBtn.style.display = "none";
+                cancelSpectatorBtn.disabled = false;
+                cancelSpectatorBtn.style.backgroundColor = "#f39c12";
                 
                 // 开始定期获取游戏状态
                 this.start_state_updates();
